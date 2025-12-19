@@ -37,6 +37,8 @@ typedef enum {
     TOK_END,
     TOK_LBRACE,
     TOK_RBRACE,
+    TOK_LBRACKET,
+    TOK_RBRACKET,
     TOK_UNKNOWN
 } TokenType;
 
@@ -206,6 +208,16 @@ size_t tokenize(const char *src, Token tokens[]) {
             i++;
             continue;
         }
+        if (src[i] == '(') {
+            tokens[t++].type = TOK_LBRACKET;
+            i++;
+            continue;
+        }
+        if (src[i] == ')') {
+            tokens[t++].type = TOK_RBRACKET;
+            i++;
+            continue;
+        }
         if (src[i] == '=') {
             if (src[i + 1] == '=') {
                 tokens[t++].type = TOK_EQUALS;
@@ -360,10 +372,15 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             continue;
         }
         if (tokens[i].type == TOK_IDENT && tokens[i + 1].type != TOK_ASSIGN) {
-            char func_name[MAX_NAME_LEN];
-            strcpy(func_name, tokens[i].text);
-            call_function(func_name);
-            i++;
+            if (tokens[i + 1].type == TOK_LBRACKET && tokens[i + 2].type == TOK_RBRACKET) {
+                char func_name[MAX_NAME_LEN];
+                strcpy(func_name, tokens[i].text);
+                call_function(func_name);
+            }
+            else {
+                fprintf(stderr, "() is missing\n");
+            }
+            i+=3;
             continue;
         }
         if (tokens[i].type == TOK_PRINT || tokens[i].type == TOK_PRINTL) {
