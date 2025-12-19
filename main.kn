@@ -1,5 +1,7 @@
 fun main {
     draw()
+    printl ""
+    even()
 }
 
 fun draw {
@@ -10,5 +12,20 @@ fun draw {
             print " *"
         }
         printl ""
+    }
+}
+
+fun even {
+    var i = 10
+    rep i {
+        if i != 0 {
+            temp = i % 2
+            if temp == 0 {
+                print i
+                printl " is even"
+            }
+        } else {
+            printl "0 is zero"
+        }
     }
 }
