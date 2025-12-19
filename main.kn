@@ -1,0 +1,14 @@
+fun main {
+    draw()
+}
+
+fun draw {
+    var i = 5
+    rep i {
+        var j = 5
+        rep j {
+            print " *"
+        }
+        printl ""
+    }
+}

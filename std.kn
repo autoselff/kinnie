@@ -1,7 +1,0 @@
-fun main {
-    info()
-}
-
-fun info {
-    printl "Hello World!"
-}
