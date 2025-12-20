@@ -1,14 +1,13 @@
 fun main {
-    draw()
+    var a = 1
+    if a > 0 {
+        out a out " jest wieksze od 0\n"
+    }
+    foo()
+    out a out "\n"
 }
 
-fun draw {
-    var i = 9
-    rep i {
-        var j = 9
-        rep j {
-            out " " out j
-        }
-        out "\n"
-    }
+fun foo {
+    a = 3
+    out a out "\n"
 }

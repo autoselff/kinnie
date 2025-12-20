@@ -39,6 +39,7 @@ typedef enum {
     TOK_RBRACE,
     TOK_LBRACKET,
     TOK_RBRACKET,
+    TOK_COMMA,
     TOK_UNKNOWN
 } TokenType;
 
@@ -64,6 +65,7 @@ typedef struct {
 typedef struct {
     Variable vars[MAX_VARS];
     size_t var_count;
+    int is_function_boundary;
 } Scope;
 
 typedef struct {
@@ -78,12 +80,13 @@ size_t function_count = 0;
 Scope scope_stack[MAX_SCOPE_DEPTH];
 size_t scope_depth = 0;
 
-void push_scope() {
+void push_scope(int is_function) {
     if (scope_depth >= MAX_SCOPE_DEPTH) {
         fprintf(stderr, "Scope depth exceeded\n");
         exit(1);
     }
     scope_stack[scope_depth].var_count = 0;
+    scope_stack[scope_depth].is_function_boundary = is_function;
     scope_depth++;
 }
 
@@ -101,6 +104,8 @@ Variable *get_var(const char *name) {
             if (strcmp(scope_stack[i].vars[j].name, name) == 0)
                 return &scope_stack[i].vars[j];
         }
+
+        if (scope_stack[i].is_function_boundary) break;
     }
     return NULL;
 }
@@ -333,7 +338,7 @@ void call_function(const char *name) {
         exit(1);
     }
     
-    push_scope();
+    push_scope(1);
     interpret_tokens(func->tokens, func->token_count);
     pop_scope();
 }
@@ -376,7 +381,7 @@ void interpret_tokens(Token tokens[], size_t token_count) {
                 call_function(func_name);
             }
             else {
-                fprintf(stderr, "() is missing\n");
+                fprintf(stderr, "The function has been called incorrectly.\n");
             }
             i+=3;
             continue;
@@ -486,7 +491,7 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             if_tokens[if_token_count].type = TOK_EOF;
 
             if (condition_met) {
-                push_scope();
+                push_scope(0);
                 interpret_tokens(if_tokens, if_token_count);
                 pop_scope();
             }
@@ -520,7 +525,7 @@ void interpret_tokens(Token tokens[], size_t token_count) {
                 else_tokens[else_token_count].type = TOK_EOF;
 
                 if (!condition_met) {
-                    push_scope();
+                    push_scope(0);
                     interpret_tokens(else_tokens, else_token_count);
                     pop_scope();
                 }
@@ -537,7 +542,7 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             char counter_name[MAX_NAME_LEN];
             strcpy(counter_name, tokens[i].text);
             i++;
-
+            
             Variable *counter_var = get_var(counter_name);
             if (!counter_var || counter_var->var_type != VAR_INT) {
                 fprintf(stderr, "Loop counter not found or not int: %s\n", counter_name);
@@ -572,7 +577,7 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             counter_var->int_value = 0;
             
             while (counter_var->int_value < goal) {
-                push_scope();
+                push_scope(0);
                 interpret_tokens(loop_tokens, loop_token_count);
                 pop_scope();
                 counter_var->int_value++;
@@ -648,7 +653,7 @@ void interpret(Token tokens[], size_t token_count) {
         exit(1);
     }
 
-    push_scope();
+    push_scope(1);
     call_function("main");
     pop_scope();
 }
