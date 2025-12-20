@@ -45,7 +45,7 @@ typedef enum {
 } TokenType;
 
 typedef enum {
-    VAR_INT,
+    VAR_DOUBLE,
     VAR_STRING
 } VarType;
 
@@ -58,7 +58,7 @@ typedef struct {
     char name[MAX_NAME_LEN];
     VarType var_type;
     union {
-        int int_value;
+        double double_value;
         char string_value[MAX_STRING_LEN];
     };
 } Variable;
@@ -113,18 +113,18 @@ Variable *get_var(const char *name) {
     return NULL;
 }
 
-void set_var_int(const char *name, int value) {
+void set_var_double(const char *name, double value) {
     Variable *v = get_var(name);
     if (v) {
-        v->var_type = VAR_INT;
-        v->int_value = value;
+        v->var_type = VAR_DOUBLE;
+        v->double_value = value;
         return;
     }
     
     Scope *current = &scope_stack[scope_depth - 1];
     strncpy(current->vars[current->var_count].name, name, MAX_NAME_LEN - 1);
-    current->vars[current->var_count].var_type = VAR_INT;
-    current->vars[current->var_count].int_value = value;
+    current->vars[current->var_count].var_type = VAR_DOUBLE;
+    current->vars[current->var_count].double_value = value;
     current->var_count++;
 }
 
@@ -291,27 +291,27 @@ Function *get_function(const char *name) {
     return NULL;
 }
 
-int parse_value(Token *tok) {
+double parse_value(Token *tok) {
     if (tok->type == TOK_NUMBER)
-        return atoi(tok->text);
+        return atof(tok->text);
     if (tok->type == TOK_IDENT) {
         Variable *v = get_var(tok->text);
         if (!v) {
             fprintf(stderr, "Unknown variable: %s\n", tok->text);
             exit(1);
         }
-        if (v->var_type != VAR_INT) {
-            fprintf(stderr, "Variable %s is not an integer\n", tok->text);
+        if (v->var_type != VAR_DOUBLE) {
+            fprintf(stderr, "Variable %s is not a number\n", tok->text);
             exit(1);
         }
-        return v->int_value;
+        return v->double_value;
     }
     fprintf(stderr, "Syntax error\n");
     exit(1);
 }
 
-int evaluate_expression(Token tokens[], size_t *idx) {
-    int result = parse_value(&tokens[*idx]);
+double evaluate_expression(Token tokens[], size_t *idx) {
+    double result = parse_value(&tokens[*idx]);
     (*idx)++;
 
     while (tokens[*idx].type == TOK_PLUS ||
@@ -322,15 +322,16 @@ int evaluate_expression(Token tokens[], size_t *idx) {
 
         TokenType op = tokens[*idx].type;
         (*idx)++;
-        int rhs = parse_value(&tokens[*idx]);
+
+        double rhs = parse_value(&tokens[*idx]);
         (*idx)++;
 
         switch (op) {
-            case TOK_PLUS: result += rhs; break;
+            case TOK_PLUS: result += rhs; break; 
             case TOK_MINUS: result -= rhs; break;
             case TOK_MUL: result *= rhs; break;
             case TOK_DIV: result /= rhs; break;
-            case TOK_MOD: result %= rhs; break;
+            case TOK_MOD: result = (double)((int)result % (int)rhs); break;
             default: break;
         }
     }
@@ -339,7 +340,7 @@ int evaluate_expression(Token tokens[], size_t *idx) {
 
 void interpret_tokens(Token tokens[], size_t token_count);
 
-void call_function(const char *name, int *args, size_t arg_count) {
+void call_function(const char *name, double *args, size_t arg_count) {
     Function *func = get_function(name);
     if (!func) {
         fprintf(stderr, "Unknown function: %s\n", name);
@@ -355,7 +356,7 @@ void call_function(const char *name, int *args, size_t arg_count) {
     push_scope(1);
     
     for (size_t i = 0; i < func->param_count; i++) {
-        set_var_int(func->param_names[i], args[i]);
+        set_var_double(func->param_names[i], args[i]);
     }
     
     interpret_tokens(func->tokens, func->token_count);
@@ -374,8 +375,8 @@ void interpret_tokens(Token tokens[], size_t token_count) {
                 set_var_string(name, tokens[i].text);
                 i++;
             } else {
-                int value = evaluate_expression(tokens, &i);
-                set_var_int(name, value);
+                double value = evaluate_expression(tokens, &i);
+                set_var_double(name, value);
             }
             continue;
         }
@@ -388,8 +389,8 @@ void interpret_tokens(Token tokens[], size_t token_count) {
                 set_var_string(name, tokens[i].text);
                 i++;
             } else {
-                int value = evaluate_expression(tokens, &i);
-                set_var_int(name, value);
+                double value = evaluate_expression(tokens, &i);
+                set_var_double(name, value);
             }
             continue;
         }
@@ -398,7 +399,7 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             strcpy(func_name, tokens[i].text);
             i += 2;
             
-            int args[MAX_FUNC_PARAMS];
+            double args[MAX_FUNC_PARAMS];
             size_t arg_count = 0;
             
             while (tokens[i].type != TOK_RBRACKET && tokens[i].type != TOK_EOF) {
@@ -460,8 +461,8 @@ void interpret_tokens(Token tokens[], size_t token_count) {
                 }
             }
             
-            int result = evaluate_expression(tokens, &i);
-            printf("%d", result);
+            double result = evaluate_expression(tokens, &i);
+            printf("%.1lf", result);
 
             continue;
         }
@@ -473,11 +474,11 @@ void interpret_tokens(Token tokens[], size_t token_count) {
                 left = atoi(tokens[i].text);
             } else if (tokens[i].type == TOK_IDENT) {
                 Variable *v = get_var(tokens[i].text);
-                if (!v || v->var_type != VAR_INT) {
+                if (!v || v->var_type != VAR_DOUBLE) {
                     fprintf(stderr, "Variable not found or not int: %s\n", tokens[i].text);
                     exit(1);
                 }
-                left = v->int_value;
+                left = v->double_value;
             }
             i++;
 
@@ -489,11 +490,11 @@ void interpret_tokens(Token tokens[], size_t token_count) {
                 right = atoi(tokens[i].text);
             } else if (tokens[i].type == TOK_IDENT) {
                 Variable *v = get_var(tokens[i].text);
-                if (!v || v->var_type != VAR_INT) {
+                if (!v || v->var_type != VAR_DOUBLE) {
                     fprintf(stderr, "Variable not found or not int: %s\n", tokens[i].text);
                     exit(1);
                 }
-                right = v->int_value;
+                right = v->double_value;
             }
             i++;
             int condition_met = 0;
@@ -581,12 +582,12 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             i++;
             
             Variable *counter_var = get_var(counter_name);
-            if (!counter_var || counter_var->var_type != VAR_INT) {
+            if (!counter_var || counter_var->var_type != VAR_DOUBLE) {
                 fprintf(stderr, "Loop counter not found or not int: %s\n", counter_name);
                 exit(1);
             }
 
-            size_t goal = counter_var->int_value;
+            size_t goal = counter_var->double_value;
             
             if (tokens[i].type != TOK_LBRACE) {
                 fprintf(stderr, "Expected '{' after repeat\n");
@@ -611,13 +612,13 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             }
             loop_tokens[loop_token_count].type = TOK_EOF;
 
-            counter_var->int_value = 0;
+            counter_var->double_value = 0;
             
-            while (counter_var->int_value < goal) {
+            while (counter_var->double_value < goal) {
                 push_scope(0);
                 interpret_tokens(loop_tokens, loop_token_count);
                 pop_scope();
-                counter_var->int_value++;
+                counter_var->double_value++;
             }
             
             i = loop_end + 1;
@@ -721,7 +722,7 @@ void interpret(Token tokens[], size_t token_count) {
         exit(1);
     }
 
-    int no_args[1] = {0};
+    double no_args[1] = {0};
     call_function("main", no_args, 0);
 }
 
