@@ -9,6 +9,7 @@
 #define MAX_SCOPE_DEPTH 16
 #define MAX_NAME_LEN 32
 #define MAX_STRING_LEN 128
+#define MAX_FUNC_PARAMS 8
 
 typedef enum {
     TOK_VAR,
@@ -72,6 +73,8 @@ typedef struct {
     char name[MAX_NAME_LEN];
     Token tokens[MAX_TOKENS];
     size_t token_count;
+    char param_names[MAX_FUNC_PARAMS][MAX_NAME_LEN];
+    size_t param_count;
 } Function;
 
 Function functions[MAX_FUNCTIONS];
@@ -221,6 +224,11 @@ size_t tokenize(const char *src, Token tokens[]) {
             i++;
             continue;
         }
+        if (src[i] == ',') {
+            tokens[t++].type = TOK_COMMA;
+            i++;
+            continue;
+        }
         if (src[i] == '=') {
             if (src[i + 1] == '=') {
                 tokens[t++].type = TOK_EQUALS;
@@ -331,14 +339,25 @@ int evaluate_expression(Token tokens[], size_t *idx) {
 
 void interpret_tokens(Token tokens[], size_t token_count);
 
-void call_function(const char *name) {
+void call_function(const char *name, int *args, size_t arg_count) {
     Function *func = get_function(name);
     if (!func) {
         fprintf(stderr, "Unknown function: %s\n", name);
         exit(1);
     }
-    
+
+    if (arg_count != func->param_count) {
+        fprintf(stderr, "The arguments do not match. Expected %zu, got %zu\n", 
+                func->param_count, arg_count);
+        exit(1);
+    }
+
     push_scope(1);
+    
+    for (size_t i = 0; i < func->param_count; i++) {
+        set_var_int(func->param_names[i], args[i]);
+    }
+    
     interpret_tokens(func->tokens, func->token_count);
     pop_scope();
 }
@@ -374,16 +393,34 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             }
             continue;
         }
-        if (tokens[i].type == TOK_IDENT && tokens[i + 1].type != TOK_ASSIGN) {
-            if (tokens[i + 1].type == TOK_LBRACKET && tokens[i + 2].type == TOK_RBRACKET) {
-                char func_name[MAX_NAME_LEN];
-                strcpy(func_name, tokens[i].text);
-                call_function(func_name);
+        if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET) {
+            char func_name[MAX_NAME_LEN];
+            strcpy(func_name, tokens[i].text);
+            i += 2;
+            
+            int args[MAX_FUNC_PARAMS];
+            size_t arg_count = 0;
+            
+            while (tokens[i].type != TOK_RBRACKET && tokens[i].type != TOK_EOF) {
+                if (arg_count >= MAX_FUNC_PARAMS) {
+                    fprintf(stderr, "Too many arguments\n");
+                    exit(1);
+                }
+                
+                args[arg_count++] = evaluate_expression(tokens, &i);
+                
+                if (tokens[i].type == TOK_COMMA) {
+                    i++;
+                }
             }
-            else {
-                fprintf(stderr, "The function has been called incorrectly.\n");
+            
+            if (tokens[i].type != TOK_RBRACKET) {
+                fprintf(stderr, "Expected ')'\n");
+                exit(1);
             }
-            i+=3;
+            i++;
+            
+            call_function(func_name, args, arg_count);
             continue;
         }
         if (tokens[i].type == TOK_PRINT) {
@@ -604,7 +641,7 @@ void parse_functions(Token tokens[], size_t token_count) {
             i++;
             
             if (tokens[i].type != TOK_IDENT) {
-                fprintf(stderr, "Expected function name after 'create'\n");
+                fprintf(stderr, "Expected function name after 'fun'\n");
                 exit(1);
             }
 
@@ -612,8 +649,39 @@ void parse_functions(Token tokens[], size_t token_count) {
             strcpy(func_name, tokens[i].text);
             i++;
 
+            functions[function_count].param_count = 0;
+
+            if (tokens[i].type == TOK_LBRACKET) {
+                i++;
+                
+                while (tokens[i].type != TOK_RBRACKET && tokens[i].type != TOK_EOF) {
+                    if (tokens[i].type == TOK_IDENT) {
+                        strncpy(
+                            functions[function_count].param_names[functions[function_count].param_count],
+                            tokens[i].text,
+                            MAX_NAME_LEN - 1
+                        );
+                        functions[function_count].param_count++;
+                        i++;
+                        
+                        if (tokens[i].type == TOK_COMMA) {
+                            i++;
+                        }
+                    } else {
+                        fprintf(stderr, "Expected parameter name\n");
+                        exit(1);
+                    }
+                }
+                
+                if (tokens[i].type != TOK_RBRACKET) {
+                    fprintf(stderr, "Expected ')' after parameters\n");
+                    exit(1);
+                }
+                i++;
+            }
+
             if (tokens[i].type != TOK_LBRACE) {
-                fprintf(stderr, "Expected '{' after function name\n");
+                fprintf(stderr, "Expected '{' after function signature\n");
                 exit(1);
             }
             i++;
@@ -653,9 +721,8 @@ void interpret(Token tokens[], size_t token_count) {
         exit(1);
     }
 
-    push_scope(1);
-    call_function("main");
-    pop_scope();
+    int no_args[1] = {0};
+    call_function("main", no_args, 0);
 }
 
 int has_extension(const char *name, const char *ext) {

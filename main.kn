@@ -1,13 +1,47 @@
-fun main {
-    var a = 1
-    if a > 0 {
-        out a out " jest wieksze od 0\n"
-    }
-    foo()
-    out a out "\n"
+fun add(a, b) {
+    var result = a + b
+    out result
+    out "\n"
 }
 
-fun foo {
-    a = 3
-    out a out "\n"
+fun multiply(x, y, z) {
+    var temp = x * y
+    var result = temp * z
+    out result
+    out "\n"
+}
+
+fun greet(times) {
+    var i = times
+    rep i {
+        out "Hello!\n"
+    }
+}
+
+fun sus(text) {
+    out text
+}
+
+fun main {
+    var x = 10
+    var y = 5
+    
+    out "Calling add(10, 5):\n"
+    add(10, 5)
+    
+    out "Calling add(x, y):\n"
+    add(x, y)
+    
+    out "Calling add with expression:\n"
+    add(x + 5, y * 2)
+    
+    out "Calling multiply(2, 3, 4):\n"
+    multiply(2, 3, 4)
+    
+    out "Calling greet(3):\n"
+    greet(3)
+
+    sus(5)
+    
+    out "Done!\n"
 }
