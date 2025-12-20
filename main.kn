@@ -1,31 +1,14 @@
 fun main {
     draw()
-    printl ""
-    even()
 }
 
 fun draw {
-    var i = 5
+    var i = 9
     rep i {
-        var j = 5
+        var j = 9
         rep j {
-            print " *"
+            out " " out j
         }
-        printl ""
-    }
-}
-
-fun even {
-    var i = 10
-    rep i {
-        if i != 0 {
-            temp = i % 2
-            if temp == 0 {
-                print i
-                printl " is even"
-            }
-        } else {
-            printl "0 is zero"
-        }
+        out "\n"
     }
 }

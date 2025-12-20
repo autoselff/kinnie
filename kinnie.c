@@ -178,10 +178,8 @@ size_t tokenize(const char *src, Token tokens[]) {
 
             if (strcmp(tokens[t].text, "var") == 0)
                 tokens[t].type = TOK_VAR;
-            else if (strcmp(tokens[t].text, "print") == 0)
+            else if (strcmp(tokens[t].text, "out") == 0)
                 tokens[t].type = TOK_PRINT;
-            else if (strcmp(tokens[t].text, "printl") == 0)
-                tokens[t].type = TOK_PRINTL;
             else if (strcmp(tokens[t].text, "rep") == 0)
                 tokens[t].type = TOK_LOOP_START;
             else if (strcmp(tokens[t].text, "fun") == 0)
@@ -383,35 +381,45 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             i+=3;
             continue;
         }
-        if (tokens[i].type == TOK_PRINT || tokens[i].type == TOK_PRINTL) {
+        if (tokens[i].type == TOK_PRINT) {
             TokenType print_type = tokens[i].type;
             i++;
             
             if (tokens[i].type == TOK_STRING) {
-                if (print_type == TOK_PRINT)
-                    printf("%s", tokens[i].text);
-                else
-                    printf("%s\n", tokens[i].text);
+                char *str = tokens[i].text;
+                for (size_t j = 0; str[j] != '\0'; j++) {
+                    if (str[j] == '\\' && str[j+1] == 'n') {
+                        putchar('\n');
+                        j++;
+                    } else {
+                        printf("%c", str[j]);
+                    }
+                }
+                
                 i++;
                 continue;
             }
+            
             if (tokens[i].type == TOK_IDENT) {
                 Variable *v = get_var(tokens[i].text);
                 if (v && v->var_type == VAR_STRING) {
-                    if (print_type == TOK_PRINT)
-                        printf("%s", v->string_value);
-                    else
-                        printf("%s\n", v->string_value);
+                    char *str = v->string_value;
+                    for (size_t j = 0; str[j] != '\0'; j++) {
+                        if (str[j] == '\\' && str[j+1] == 'n') {
+                            putchar('\n');
+                            j++;
+                        } else {
+                            printf("%c", str[j]);
+                        }
+                    }
+                    
                     i++;
                     continue;
                 }
             }
             
             int result = evaluate_expression(tokens, &i);
-            if (print_type == TOK_PRINT)
-                printf("%d", result);
-            else
-                printf("%d\n", result);
+            printf("%d", result);
 
             continue;
         }
