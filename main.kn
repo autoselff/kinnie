@@ -1,8 +1,15 @@
-fun set(x) {
-    ret x
+fun mod(a, b) {
+    ret a % b
 }
 
 fun main {
-    var v = set(6)
-    out "Returned value: {v}.\n"
+    z = 9 x = 2
+    var a = mod(z, x)
+
+    if a == 1 {
+        var i = 5
+        rep i {
+            out "{z} % {x} == {a}\n"
+        }
+    }
 }
