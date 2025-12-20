@@ -41,6 +41,7 @@ typedef enum {
     TOK_LBRACKET,
     TOK_RBRACKET,
     TOK_COMMA,
+    TOK_RETURN,
     TOK_UNKNOWN
 } TokenType;
 
@@ -82,6 +83,9 @@ size_t function_count = 0;
 
 Scope scope_stack[MAX_SCOPE_DEPTH];
 size_t scope_depth = 0;
+
+Variable return_value;
+int has_return_value = 0;
 
 void push_scope(int is_function) {
     if (scope_depth >= MAX_SCOPE_DEPTH) {
@@ -186,6 +190,8 @@ size_t tokenize(const char *src, Token tokens[]) {
 
             if (strcmp(tokens[t].text, "var") == 0)
                 tokens[t].type = TOK_VAR;
+            else if (strcmp(tokens[t].text, "ret") == 0)
+                tokens[t].type = TOK_RETURN;
             else if (strcmp(tokens[t].text, "out") == 0)
                 tokens[t].type = TOK_PRINT;
             else if (strcmp(tokens[t].text, "rep") == 0)
@@ -353,6 +359,8 @@ void call_function(const char *name, double *args, size_t arg_count) {
         exit(1);
     }
 
+    has_return_value = 0;
+
     push_scope(1);
     
     for (size_t i = 0; i < func->param_count; i++) {
@@ -371,19 +379,40 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             strcpy(name, tokens[i + 1].text);
             i += 3;
             
-            if (tokens[i].type == TOK_STRING) {
-                set_var_string(name, tokens[i].text);
+            if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET) {
+                char func_name[MAX_NAME_LEN];
+                strcpy(func_name, tokens[i].text);
+                i += 2;
+                
+                double args[MAX_FUNC_PARAMS];
+                size_t arg_count = 0;
+                
+                while (tokens[i].type != TOK_RBRACKET && tokens[i].type != TOK_EOF) {
+                    args[arg_count++] = evaluate_expression(tokens, &i);
+                    if (tokens[i].type == TOK_COMMA) i++;
+                }
+                
+                if (tokens[i].type != TOK_RBRACKET) {
+                    fprintf(stderr, "Expected ')'\n");
+                    exit(1);
+                }
                 i++;
-            } else {
-                double value = evaluate_expression(tokens, &i);
-                set_var_double(name, value);
+                
+                call_function(func_name, args, arg_count);
+                
+                if (has_return_value) {
+                    if (return_value.var_type == VAR_DOUBLE) {
+                        set_var_double(name, return_value.double_value);
+                    } else if (return_value.var_type == VAR_STRING) {
+                        set_var_string(name, return_value.string_value);
+                    }
+                } else {
+                    fprintf(stderr, "Function %s did not return a value\n", func_name);
+                    exit(1);
+                }
+                
+                continue;
             }
-            continue;
-        }
-        if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_ASSIGN) {
-            char name[MAX_NAME_LEN];
-            strcpy(name, tokens[i].text);
-            i += 2;
             
             if (tokens[i].type == TOK_STRING) {
                 set_var_string(name, tokens[i].text);
@@ -394,6 +423,52 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             }
             continue;
         }
+
+        if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_ASSIGN) {
+            char name[MAX_NAME_LEN];
+            strcpy(name, tokens[i].text);
+            i += 2;
+            
+            if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET) {
+                char func_name[MAX_NAME_LEN];
+                strcpy(func_name, tokens[i].text);
+                i += 2;
+                
+                double args[MAX_FUNC_PARAMS];
+                size_t arg_count = 0;
+                
+                while (tokens[i].type != TOK_RBRACKET && tokens[i].type != TOK_EOF) {
+                    args[arg_count++] = evaluate_expression(tokens, &i);
+                    if (tokens[i].type == TOK_COMMA) i++;
+                }
+                i++;
+                
+                call_function(func_name, args, arg_count);
+                
+                if (has_return_value) {
+                    if (return_value.var_type == VAR_DOUBLE) {
+                        set_var_double(name, return_value.double_value);
+                    } else if (return_value.var_type == VAR_STRING) {
+                        set_var_string(name, return_value.string_value);
+                    }
+                } else {
+                    fprintf(stderr, "Function %s did not return a value\n", func_name);
+                    exit(1);
+                }
+                
+                continue;
+            }
+            
+            if (tokens[i].type == TOK_STRING) {
+                set_var_string(name, tokens[i].text);
+                i++;
+            } else {
+                double value = evaluate_expression(tokens, &i);
+                set_var_double(name, value);
+            }
+            continue;
+        }
+
         if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET) {
             char func_name[MAX_NAME_LEN];
             strcpy(func_name, tokens[i].text);
@@ -424,6 +499,7 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             call_function(func_name, args, arg_count);
             continue;
         }
+
         if (tokens[i].type == TOK_PRINT) {
             TokenType print_type = tokens[i].type;
             i++;
@@ -466,6 +542,7 @@ void interpret_tokens(Token tokens[], size_t token_count) {
 
             continue;
         }
+
         if (tokens[i].type == TOK_IF_START) {
             i++;
 
@@ -623,6 +700,25 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             
             i = loop_end + 1;
             continue;
+        }
+
+        if (tokens[i].type == TOK_RETURN) {
+            i++;
+            
+            if (tokens[i].type == TOK_STRING) {
+                return_value.var_type = VAR_STRING;
+                strncpy(return_value.string_value, tokens[i].text, MAX_STRING_LEN - 1);
+                return_value.string_value[MAX_STRING_LEN - 1] = 0;
+                has_return_value = 1;
+                i++;
+            } else {
+                double result = evaluate_expression(tokens, &i);
+                return_value.var_type = VAR_DOUBLE;
+                return_value.double_value = result;
+                has_return_value = 1;
+            }
+            
+            return;
         }
 
         if (tokens[i].type == TOK_END) {

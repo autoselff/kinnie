@@ -1,21 +1,8 @@
-
-fun divide(x, y) {
-    var temp = x / y
-    out x out " / " out y out " = "
-    out temp
-    out "\n"
+fun set(x) {
+    ret x
 }
 
-fun even(x) {
-    var mod = x % 2
-    if mod == 0 {
-        out "the number is even.\n"
-    } else {
-        out "the number is odd\n"
-    }
-}
-
-fun main() {
-    divide(5, 2)
-    even(5)
+fun main {
+    var v = set(6)
+    out v
 }
