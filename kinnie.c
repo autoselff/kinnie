@@ -578,47 +578,57 @@ void interpret_tokens(Token tokens[], size_t token_count) {
         if (tokens[i].type == TOK_IF_START) {
             i++;
 
-            int left = 0;
+            double left = 0;
             if (tokens[i].type == TOK_NUMBER) {
-                left = atoi(tokens[i].text);
+                left = atof(tokens[i].text);
             } else if (tokens[i].type == TOK_IDENT) {
                 Variable *v = get_var(tokens[i].text);
                 if (!v || v->var_type != VAR_DOUBLE) {
-                    fprintf(stderr, "Variable not found or not int: %s\n", tokens[i].text);
+                    fprintf(stderr, "Variable not found or not double: %s\n", tokens[i].text);
                     exit(1);
                 }
                 left = v->double_value;
             }
-            i++;
 
-            TokenType op = tokens[i].type;
-            i++;
+            int condition_met = 0;
+            TokenType op = tokens[i + 1].type;
+            if (op == TOK_EQUALS || op == TOK_MORE || op == TOK_LESS || op == TOK_NOT_EQUALS || op == TOK_MORE_EQUALS || op == TOK_LESS_EQUALS) {
+                i += 2;
 
-            int right = 0;
-            if (tokens[i].type == TOK_NUMBER) {
-                right = atoi(tokens[i].text);
-            } else if (tokens[i].type == TOK_IDENT) {
-                Variable *v = get_var(tokens[i].text);
-                if (!v || v->var_type != VAR_DOUBLE) {
-                    fprintf(stderr, "Variable not found or not int: %s\n", tokens[i].text);
+                double right = 0;
+                if (tokens[i].type == TOK_NUMBER) {
+                    right = atof(tokens[i].text);
+                } else if (tokens[i].type == TOK_IDENT) {
+                    Variable *v = get_var(tokens[i].text);
+                    if (!v || v->var_type != VAR_DOUBLE) {
+                        fprintf(stderr, "Variable not found or not double: %s\n", tokens[i].text);
+                        exit(1);
+                    }
+                    right = v->double_value;
+                }
+
+                i++;
+                if (op == TOK_EQUALS) condition_met = (left == right);
+                else if (op == TOK_MORE) condition_met = (left > right);
+                else if (op == TOK_LESS) condition_met = (left < right);
+                else if (op == TOK_NOT_EQUALS) condition_met = (left != right);
+                else if (op == TOK_MORE_EQUALS) condition_met = (left >= right);
+                else if (op == TOK_LESS_EQUALS) condition_met = (left <= right);
+
+                if (tokens[i].type != TOK_LBRACE) {
+                    fprintf(stderr, "Expected '{' after if condition\n");
                     exit(1);
                 }
-                right = v->double_value;
+                i++;
+            } else {
+                condition_met = (left != 0);
+                
+                if (tokens[i + 1].type != TOK_LBRACE) {
+                    fprintf(stderr, "Expected '{' after if condition\n");
+                    exit(1);
+                }
+                i += 2;
             }
-            i++;
-            int condition_met = 0;
-            if (op == TOK_EQUALS) condition_met = (left == right);
-            else if (op == TOK_MORE) condition_met = (left > right);
-            else if (op == TOK_LESS) condition_met = (left < right);
-            else if (op == TOK_NOT_EQUALS) condition_met = (left != right);
-            else if (op == TOK_MORE_EQUALS) condition_met = (left >= right);
-            else if (op == TOK_LESS_EQUALS) condition_met = (left <= right);
-
-            if (tokens[i].type != TOK_LBRACE) {
-                fprintf(stderr, "Expected '{' after if condition\n");
-                exit(1);
-            }
-            i++;
 
             size_t block_start = i;
             size_t block_end = i;

@@ -6,7 +6,7 @@ fun main {
     z = 9 x = 2
     var a = mod(z, x)
 
-    if a == 1 {
+    if a {
         var i = 5
         rep i {
             out "{z} % {x} == {a}\n"
