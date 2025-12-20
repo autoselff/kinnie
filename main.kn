@@ -4,5 +4,5 @@ fun set(x) {
 
 fun main {
     var v = set(6)
-    out v
+    out "Returned value: {v}.\n"
 }

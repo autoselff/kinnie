@@ -510,7 +510,39 @@ void interpret_tokens(Token tokens[], size_t token_count) {
                     if (str[j] == '\\' && str[j+1] == 'n') {
                         putchar('\n');
                         j++;
-                    } else {
+                    } else if (str[j] == '{') {
+                        j++;
+                        char var_name[MAX_NAME_LEN];
+                        size_t var_name_i = 0;
+
+                        while (str[j] != '}' && str[j] != '\0') {
+                            var_name[var_name_i++] = str[j++];
+                        }
+                        var_name[var_name_i] = '\0';
+
+                        if (str[j] != '}') {
+                            fprintf(stderr, "Missing closing '}' in string interpolation\n");
+                            exit(1);
+                        }
+
+                        Variable *temp_var = get_var(var_name);
+                        if (!temp_var) {
+                            fprintf(stderr, "Variable not found: %s\n", var_name);
+                            exit(1);
+                        }
+
+                        switch (temp_var->var_type) {
+                            case VAR_DOUBLE:
+                                printf("%.1lf", temp_var->double_value);
+                                break;
+                            case VAR_STRING:
+                                printf("%s", temp_var->string_value);
+                                break;
+                            default:
+                                fprintf(stderr, "Cannot interpolate variable of this type\n");
+                                exit(1);
+                        }
+                    }else {
                         printf("%c", str[j]);
                     }
                 }
