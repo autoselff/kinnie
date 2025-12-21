@@ -1,4 +1,4 @@
 fun main {
-    var int = 15
-    var str = "test text"
+    var number = 15
+    var text = "test text"
 }

@@ -866,7 +866,9 @@ void interpret(Token tokens[], size_t token_count) {
     }
 
     double no_args[1] = {0};
+    fprintf(c_output, "int main(void) {\n");
     call_function("main", no_args, 0);
+    fprintf(c_output, "}\n");
 }
 
 int has_extension(const char *name, const char *ext) {
@@ -886,11 +888,14 @@ int main(int argc, char **argv) {
     size_t len = strlen(argv[1]);
 
     if (len > 3 && strcmp(argv[1] + len - 3, ".kn") == 0) {
-        snprintf(output_name, sizeof(output_name), "%.*s.c", (int)(len - 3), argv[1]);
+        snprintf(output_name, sizeof(output_name), "%.*s", (int)(len - 3), argv[1]);
     } else {
-        snprintf(output_name, sizeof(output_name), "%s.c", argv[1]);
+        snprintf(output_name, sizeof(output_name), "%s", argv[1]);
     }
-    c_output = fopen(output_name, "w");
+    
+    char c_filename[512];
+    snprintf(c_filename, sizeof(c_filename), "%s.c", output_name);
+    c_output = fopen(c_filename, "w");
 
     fprintf(c_output, "#include <stdio.h>\n#include <string.h>\n#include <ctype.h>\n#include <string.h>\n");
 
@@ -929,6 +934,17 @@ int main(int argc, char **argv) {
 
     fclose(c_output);
     free(source);
+
+    char cmd[1024];
+    
+    snprintf(cmd, sizeof(cmd), "gcc -o %s %s.c", output_name, output_name);
+    system(cmd);
+    
+    // snprintf(cmd, sizeof(cmd), "rm %s.c", output_name);
+    // system(cmd);
+    
+    snprintf(cmd, sizeof(cmd), "./%s", output_name);
+    system(cmd);
 
     return 0;
 }

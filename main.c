@@ -2,5 +2,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <string.h>
-double int = 15.000000;
-char str[128] = "test text";
+int main(void) {
+double number = 15.000000;
+char text[128] = "test text";
+}
