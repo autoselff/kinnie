@@ -913,9 +913,24 @@ int main(int argc, char **argv) {
     source[size] = '\0';
     fclose(f);
 
+    FILE* out = fopen("output.c", "w");
+
+    fprintf(out, "#include <stdio.h>\n");
+    fprintf(out, "#include <stdlib.h>\n");
+    fprintf(out, "#include <string.h>\n");
+    fprintf(out, "#include <ctype.h>\n");
+
     token_count = tokenize(source, tokens);
     interpret(tokens, token_count);
 
+    fprintf(out, "int main() { printf(\"\\nHello World! \\n \"); return 0; }");
+
+    fclose(out);
     free(source);
+
+    system("gcc -o output output.c");
+    system("rm output.c");
+    system("./output");
+
     return 0;
 }
