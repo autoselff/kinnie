@@ -78,6 +78,9 @@ typedef struct {
     size_t param_count;
 } Function;
 
+FILE* c_output = NULL;
+int c_indent = 0;
+
 Function functions[MAX_FUNCTIONS];
 size_t function_count = 0;
 
@@ -378,7 +381,7 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             char name[MAX_NAME_LEN];
             strcpy(name, tokens[i + 1].text);
             i += 3;
-            
+
             if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET) {
                 char func_name[MAX_NAME_LEN];
                 strcpy(func_name, tokens[i].text);
@@ -416,10 +419,12 @@ void interpret_tokens(Token tokens[], size_t token_count) {
             
             if (tokens[i].type == TOK_STRING) {
                 set_var_string(name, tokens[i].text);
+                fprintf(c_output, "char %s[%d] = \"%s\";\n", name, MAX_STRING_LEN, tokens[i].text);
                 i++;
             } else {
                 double value = evaluate_expression(tokens, &i);
                 set_var_double(name, value);
+                fprintf(c_output, "double %s = %lf;\n", name, value);
             }
             continue;
         }
@@ -877,14 +882,20 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    char output_name[256];
+    size_t len = strlen(argv[1]);
+
+    if (len > 3 && strcmp(argv[1] + len - 3, ".kn") == 0) {
+        snprintf(output_name, sizeof(output_name), "%.*s.c", (int)(len - 3), argv[1]);
+    } else {
+        snprintf(output_name, sizeof(output_name), "%s.c", argv[1]);
+    }
+    c_output = fopen(output_name, "w");
+
+    fprintf(c_output, "#include <stdio.h>\n#include <string.h>\n#include <ctype.h>\n#include <string.h>\n");
+
     Token tokens[MAX_TOKENS];
     size_t token_count;
-
-    if (!has_extension(argv[1], ".kn")) {
-        token_count = tokenize(argv[1], tokens);
-        interpret(tokens, token_count);
-        return 0;
-    }
 
     FILE *f = fopen(argv[1], "rb");
     if (!f) {
@@ -913,24 +924,11 @@ int main(int argc, char **argv) {
     source[size] = '\0';
     fclose(f);
 
-    FILE* out = fopen("output.c", "w");
-
-    fprintf(out, "#include <stdio.h>\n");
-    fprintf(out, "#include <stdlib.h>\n");
-    fprintf(out, "#include <string.h>\n");
-    fprintf(out, "#include <ctype.h>\n");
-
     token_count = tokenize(source, tokens);
     interpret(tokens, token_count);
 
-    fprintf(out, "int main() { printf(\"\\nHello World! \\n \"); return 0; }");
-
-    fclose(out);
+    fclose(c_output);
     free(source);
-
-    system("gcc -o output output.c");
-    system("rm output.c");
-    system("./output");
 
     return 0;
 }
