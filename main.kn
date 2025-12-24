@@ -27,12 +27,11 @@ fun check(i) {
     ret counter
 }
 
-fun draw(i) {
+fun draw(size) {
     out "\n"
-    var size = i + 1
-    i = size
+    var i = size
+    var j = size
     rep i {
-        var j = size
         rep j {
             out " *"
         }
