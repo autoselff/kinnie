@@ -1,5 +1,5 @@
 # Kinnietype
-A simple and minimalist programming language made for game development (Compiles to C++)
+A simple and minimalist programming language dedicated to developing small games (compiles to C++)
 
 ## Compilation
 
