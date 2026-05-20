@@ -406,9 +406,26 @@ static void write_indent(FILE *out, int indent) {
         fprintf(out, "    ");
 }
 
+static const char *map_builtin(const char *name) {
+    if (strcmp(name, "sin")      == 0) return "std::sin";
+    if (strcmp(name, "cos")      == 0) return "std::cos";
+    if (strcmp(name, "abs")      == 0) return "std::fabs";
+    if (strcmp(name, "min")      == 0) return "std::min<double>";
+    if (strcmp(name, "max")      == 0) return "std::max<double>";
+    if (strcmp(name, "lerp")     == 0) return "_lerp";
+    if (strcmp(name, "distance") == 0) return "_distance";
+    if (strcmp(name, "mod")      == 0) return "std::fmod";
+    if (strcmp(name, "random")   == 0) return "_random";
+    return NULL;
+}
+
 static size_t emit_expression(Token tokens[], size_t i, FILE *out);
 
 static size_t emit_value(Token tokens[], size_t i, FILE *out) {
+    if (tokens[i].type == TOK_MINUS || tokens[i].type == TOK_PLUS) {
+        fprintf(out, "%c", tokens[i].type == TOK_MINUS ? '-' : '+');
+        return emit_value(tokens, i + 1, out);
+    }
     if (tokens[i].type == TOK_NUMBER) { fprintf(out, "%s", tokens[i].text); return i + 1; }
     if (tokens[i].type == TOK_IDENT) {
         if (tokens[i+1].type == TOK_LBRACKET && strcmp(tokens[i].text, "random") == 0) {
@@ -421,6 +438,23 @@ static size_t emit_value(Token tokens[], size_t i, FILE *out) {
             if (tokens[i].type == TOK_RBRACKET) i++;
             fprintf(out, ")");
             return i;
+        }
+        if (tokens[i+1].type == TOK_LBRACKET) {
+            const char *mapped = map_builtin(tokens[i].text);
+            if (mapped) {
+                fprintf(out, "%s(", mapped);
+                i += 2;
+                int first = 1;
+                while (tokens[i].type != TOK_RBRACKET && tokens[i].type != TOK_EOF) {
+                    if (!first) fprintf(out, ", ");
+                    first = 0;
+                    i = emit_expression(tokens, i, out);
+                    if (tokens[i].type == TOK_COMMA) i++;
+                }
+                if (tokens[i].type == TOK_RBRACKET) i++;
+                fprintf(out, ")");
+                return i;
+            }
         }
         if (tokens[i+1].type == TOK_LSQUARE) {
             fprintf(out, "%s[(int)(", tokens[i].text);
@@ -635,6 +669,61 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             continue;
         }
 
+        if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET &&
+            strcmp(tokens[i].text, "drawSquare") == 0) {
+            i += 2;
+            char x_buf[256]="", y_buf[256]="", s_buf[256]="", r_buf[256]="", g_buf[256]="", b_buf[256]="";
+            size_t buf_i = 0;
+            for (int arg = 0; arg < 6 && tokens[i].type != TOK_RBRACKET; arg++) {
+                char *buf = (arg==0?x_buf:arg==1?y_buf:arg==2?s_buf:arg==3?r_buf:arg==4?g_buf:b_buf);
+                buf_i = 0;
+                while (tokens[i].type != TOK_COMMA && tokens[i].type != TOK_RBRACKET && tokens[i].type != TOK_EOF) {
+                    if      (tokens[i].type == TOK_NUMBER) buf_i += snprintf(buf+buf_i, 256-buf_i, "%s", tokens[i].text);
+                    else if (tokens[i].type == TOK_IDENT)  buf_i += snprintf(buf+buf_i, 256-buf_i, "%s", tokens[i].text);
+                    else if (tokens[i].type == TOK_PLUS)   buf_i += snprintf(buf+buf_i, 256-buf_i, " + ");
+                    else if (tokens[i].type == TOK_MINUS)  buf_i += snprintf(buf+buf_i, 256-buf_i, " - ");
+                    else if (tokens[i].type == TOK_MUL)    buf_i += snprintf(buf+buf_i, 256-buf_i, " * ");
+                    else if (tokens[i].type == TOK_DIV)    buf_i += snprintf(buf+buf_i, 256-buf_i, " / ");
+                    i++;
+                }
+                if (tokens[i].type == TOK_COMMA) i++;
+            }
+            write_indent(out, indent);
+            fprintf(out, "{ SDL_SetRenderDrawColor(_renderer, %s, %s, %s, 255);\n", r_buf, g_buf, b_buf);
+            write_indent(out, indent);
+            fprintf(out, "  SDL_Rect _sq = {(int)(%s),(int)(%s),(int)(%s),(int)(%s)};\n", x_buf, y_buf, s_buf, s_buf);
+            write_indent(out, indent);
+            fprintf(out, "  SDL_RenderFillRect(_renderer, &_sq); }\n");
+            if (tokens[i].type == TOK_RBRACKET) i++;
+            continue;
+        }
+
+        if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET &&
+            strcmp(tokens[i].text, "drawCircle") == 0) {
+            i += 2;
+            char x_buf[256]="", y_buf[256]="", rad_buf[256]="", r_buf[256]="", g_buf[256]="", b_buf[256]="";
+            size_t buf_i = 0;
+            for (int arg = 0; arg < 6 && tokens[i].type != TOK_RBRACKET; arg++) {
+                char *buf = (arg==0?x_buf:arg==1?y_buf:arg==2?rad_buf:arg==3?r_buf:arg==4?g_buf:b_buf);
+                buf_i = 0;
+                while (tokens[i].type != TOK_COMMA && tokens[i].type != TOK_RBRACKET && tokens[i].type != TOK_EOF) {
+                    if      (tokens[i].type == TOK_NUMBER) buf_i += snprintf(buf+buf_i, 256-buf_i, "%s", tokens[i].text);
+                    else if (tokens[i].type == TOK_IDENT)  buf_i += snprintf(buf+buf_i, 256-buf_i, "%s", tokens[i].text);
+                    else if (tokens[i].type == TOK_PLUS)   buf_i += snprintf(buf+buf_i, 256-buf_i, " + ");
+                    else if (tokens[i].type == TOK_MINUS)  buf_i += snprintf(buf+buf_i, 256-buf_i, " - ");
+                    else if (tokens[i].type == TOK_MUL)    buf_i += snprintf(buf+buf_i, 256-buf_i, " * ");
+                    else if (tokens[i].type == TOK_DIV)    buf_i += snprintf(buf+buf_i, 256-buf_i, " / ");
+                    i++;
+                }
+                if (tokens[i].type == TOK_COMMA) i++;
+            }
+            write_indent(out, indent);
+            fprintf(out, "_drawCircle(_renderer, (int)(%s),(int)(%s),(int)(%s),(int)(%s),(int)(%s),(int)(%s));\n",
+                    x_buf, y_buf, rad_buf, r_buf, g_buf, b_buf);
+            if (tokens[i].type == TOK_RBRACKET) i++;
+            continue;
+        }
+
         if (tokens[i].type == TOK_VAR) {
             char name[MAX_NAME_LEN];
             strcpy(name, tokens[i + 1].text);
@@ -662,9 +751,9 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
                 continue;
             }
 
-            if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET) {
-                char func_name[MAX_NAME_LEN];
-                strcpy(func_name, tokens[i].text);
+            if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET &&
+                !map_builtin(tokens[i].text)) {
+                const char *func_name = tokens[i].text;
                 i += 2;
                 fprintf(out, "auto %s = %s(", name, func_name);
                 int first = 1;
@@ -717,9 +806,9 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
 
             write_indent(out, indent);
 
-            if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET) {
-                char func_name[MAX_NAME_LEN];
-                strcpy(func_name, tokens[i].text);
+            if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET &&
+                !map_builtin(tokens[i].text)) {
+                const char *func_name = tokens[i].text;
                 i += 2;
                 fprintf(out, "%s = %s(", name, func_name);
                 int first = 1;
@@ -746,8 +835,8 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
         }
 
         if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET) {
-            char func_name[MAX_NAME_LEN];
-            strcpy(func_name, tokens[i].text);
+            const char *_mb = map_builtin(tokens[i].text);
+            const char *func_name = _mb ? _mb : tokens[i].text;
             i += 2;
 
             write_indent(out, indent);
@@ -948,7 +1037,7 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
                 fprintf(out, "if (_event.type == SDL_KEYUP) _key_state[_event.key.keysym.sym %% 512] = 0;\n");
                 write_indent(out, indent + 2);
                 fprintf(out, "}\n");
-                convert_tokens_to_cpp(loop_tokens, loop_token_count, out, indent + 2, is_main);
+                convert_tokens_to_cpp(loop_tokens, loop_token_count, out, indent + 2, 0);
                 write_indent(out, indent + 2);
                 fprintf(out, "SDL_RenderPresent(_renderer);\n");
                 write_indent(out, indent + 1);
@@ -1026,7 +1115,7 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path)
     FILE *out = fopen(output_path, "w");
     if (!out) { perror("fopen"); exit(1); }
 
-    fprintf(out, "#include <iostream>\n#include <string>\n#include <cstring>\n#include <vector>\n#include <random>\n#include <iomanip>\n");
+    fprintf(out, "#include <iostream>\n#include <string>\n#include <cstring>\n#include <vector>\n#include <random>\n#include <iomanip>\n#include <cmath>\n");
 #if HAVE_SDL
     fprintf(out, "#include <SDL2/SDL.h>\n");
 #endif
@@ -1048,7 +1137,9 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path)
     fprintf(out, "double _random(double min, double max) {\n");
     fprintf(out, "    std::uniform_real_distribution<double> dist(min, max);\n");
     fprintf(out, "    return dist(_rng);\n");
-    fprintf(out, "}\n\n");
+    fprintf(out, "}\n");
+    fprintf(out, "double _lerp(double a, double b, double t) { return a + (b - a) * t; }\n");
+    fprintf(out, "double _distance(double x1, double y1, double x2, double y2) { return std::sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1)); }\n\n");
 #if HAVE_SDL
     fprintf(out, "SDL_Window *_window = nullptr;\n");
     fprintf(out, "SDL_Renderer *_renderer = nullptr;\n");
@@ -1067,6 +1158,18 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path)
     fprintf(out, "    if (kc == SDLK_UNKNOWN) return false;\n");
     fprintf(out, "    int idx = kc %% 512;\n");
     fprintf(out, "    return _key_state[idx];\n");
+    fprintf(out, "}\n\n");
+    fprintf(out, "void _drawCircle(SDL_Renderer *r, int cx, int cy, int radius, int red, int green, int blue) {\n");
+    fprintf(out, "    SDL_SetRenderDrawColor(r, red, green, blue, 255);\n");
+    fprintf(out, "    int x = radius, y = 0, err = 0;\n");
+    fprintf(out, "    while (x >= y) {\n");
+    fprintf(out, "        SDL_RenderDrawPoint(r,cx+x,cy+y); SDL_RenderDrawPoint(r,cx+y,cy+x);\n");
+    fprintf(out, "        SDL_RenderDrawPoint(r,cx-y,cy+x); SDL_RenderDrawPoint(r,cx-x,cy+y);\n");
+    fprintf(out, "        SDL_RenderDrawPoint(r,cx-x,cy-y); SDL_RenderDrawPoint(r,cx-y,cy-x);\n");
+    fprintf(out, "        SDL_RenderDrawPoint(r,cx+y,cy-x); SDL_RenderDrawPoint(r,cx+x,cy-y);\n");
+    fprintf(out, "        if (err <= 0) { y++; err += 2*y+1; }\n");
+    fprintf(out, "        else          { x--; err -= 2*x+1; }\n");
+    fprintf(out, "    }\n");
     fprintf(out, "}\n\n");
 #endif
 

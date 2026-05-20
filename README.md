@@ -79,14 +79,37 @@ var playerName = player[6]   // "player"
 - `-` subtraction  
 - `*` multiplication
 - `/` division
-- `mod()` modulo
 
 ```kinnie
 var sum = 5 + 3
 var diff = 10 - 2
 var prod = 4 * 5
 var div = 20 / 4
-var rem = mod(16, 5)
+```
+
+### Math Functions
+
+| Function | Description |
+|---|---|
+| `sin(x)` | sine of x (radians) |
+| `cos(x)` | cosine of x (radians) |
+| `abs(x)` | absolute value |
+| `min(a, b)` | smaller of two values |
+| `max(a, b)` | larger of two values |
+| `mod(a, b)` | floating-point modulo |
+| `lerp(a, b, t)` | linear interpolation: `a + (b-a) * t` |
+| `distance(x1, y1, x2, y2)` | Euclidean distance between two points |
+
+```kinnie
+var angle = 1.57
+var s = sin(angle)       // ~1.0
+var c = cos(angle)       // ~0.0
+var v = abs(-5)          // 5
+var lo = min(3, 7)       // 3
+var hi = max(3, 7)       // 7
+var r = mod(10.5, 3)     // 1.5
+var m = lerp(0, 100, 0.25)       // 25
+var d = distance(0, 0, 3, 4)     // 5
 ```
 
 ### Comparison Operators
@@ -214,23 +237,6 @@ Parameters: RGB values (0-255)
 drawPixel(x, y, r, g, b)
 ```
 
-### Geometry and Collision Functions
-
-#### `distance(x1, y1, x2, y2)` → number
-Distance squared between two points.
-```kinnie
-var dist = distance(0, 0, 3, 4)
-```
-
-#### `isColliding(x1, y1, size1, x2, y2, size2)` → 0 or 1
-Checks collision between two circles.
-```kinnie
-var collision = isColliding(10, 10, 5, 20, 20, 5)
-if collision {
-    out "Collision!"
-}
-```
-
 ### Drawing Functions
 
 #### `drawPixel(x, y, r, g, b)`
@@ -239,7 +245,13 @@ Draws a single pixel.
 #### `drawSquare(x, y, size, r, g, b)`
 Draws a filled square.
 ```kinnie
-drawSquare(100, 100, 50, 255, 0, 0)  // Red square
+drawSquare(100, 100, 50, 255, 0, 0)  // red square at (100,100), size 50
+```
+
+#### `drawCircle(x, y, radius, r, g, b)`
+Draws a circle outline using the midpoint circle algorithm.
+```kinnie
+drawCircle(200, 150, 40, 0, 255, 0)  // green circle at (200,150), radius 40
 ```
 
 ### Random Functions
@@ -296,10 +308,10 @@ playerX = playerX + speed * deltaTime
 
 ## Limitations
 
-- Maximum 8192 tokens per file
-- Maximum 512 functions
-- Maximum 64 parameters per function
-- Maximum 256 characters in variable name
-- Maximum 1024 characters in string
-- All numeric values are floating point numbers (double)
-- No structs/objects (open for implementation)
+- Maximum 8192 tokens per file (after includes)
+- Maximum 64 functions
+- Maximum 16 parameters per function
+- Maximum 32 characters in a name
+- Maximum 128 characters in a string literal
+- All numeric values are floating point (`double`)
+- No structs/objects

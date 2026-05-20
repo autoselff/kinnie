@@ -1,42 +1,72 @@
-add "lib.kn"
-
-fun movement(player) {
-    var speed = 200
-    if keyDown("Left") {
-        player[0] = player[0] - speed * deltaTime
-    }
-    if keyDown("Right") {
-        player[0] = player[0] + speed * deltaTime
-    }
-    if keyDown("Up") {
-        player[1] = player[1] - speed * deltaTime
-    }
-    if keyDown("Down") {
-        player[1] = player[1] + speed * deltaTime
-    }
-
-    if keyPressed("1") {
-        stop
-    }
-}
-
-// main function
 fun main() {
-    createWindow(800, 600, "kinnietype")
-    var player = [400, 300, 60, 50, 100, 200, "player"]
-    var object = [600, 200, 30, 50, 200, 100, "object"]
+    createWindow(640, 480, "Kinnie Demo")
 
-    rep true {
-        clearScreen(10, 10, 10)
+    var t = 0
+    var bx = 320
+    var by = 240
+    var vx = 160
+    var vy = 110
+    var plx = 320
+    var ply = 400
+    var spd = 220
 
-        movement(player)
+    rep 1 {
+        clearScreen(10, 10, 25)
 
-        if isColliding(player[0], player[1], object[2], object[0], object[1], object[2]) {
-            object[0] = random(100, 700)
-            object[1] = random(100, 500)
+        // player movement (arrow keys), clamped to window
+        if keyDown("right") { plx = plx + spd * deltaTime }
+        if keyDown("left")  { plx = plx - spd * deltaTime }
+        if keyDown("down")  { ply = ply + spd * deltaTime }
+        if keyDown("up")    { ply = ply - spd * deltaTime }
+        plx = min(max(plx, 12), 628)
+        ply = min(max(ply, 12), 468)
+
+        // if player touches the ball, deflect it
+        var pd = distance(plx, ply, bx, by)
+        if pd < 36 {
+            vx = 0 - vx
+            vy = 0 - vy
         }
 
-        drawSquare(player[0], player[1], player[2], player[3], player[4], player[5])
-        drawSquare(object[0], object[1], object[2], object[3], object[4], object[5])
+        // escape to quit
+        if keyPressed("escape") { stop }
+
+        // bouncing ball
+        bx = bx + vx * deltaTime
+        by = by + vy * deltaTime
+        if bx > 620 { vx = 0 - abs(vx) }
+        if bx < 20  { vx = abs(vx) }
+        if by > 460 { vy = 0 - abs(vy) }
+        if by < 20  { vy = abs(vy) }
+
+        // ball color based on distance from center
+        var d = distance(bx, by, 320, 240)
+        var cr = lerp(255, 60, min(d, 260) / 260)
+        var cg = lerp(60, 220, (sin(t * 1.5) + 1) * 0.5)
+        var cb = lerp(120, 255, (cos(t) + 1) * 0.5)
+        drawCircle(bx, by, 24, cr, cg, cb)
+
+        // rotating square on orbit
+        var sx = 320 + cos(t * 0.8) * 190
+        var sy = 240 + sin(t * 0.8) * 140
+        var sc = mod(t * 60, 200) + 55
+        drawSquare(sx - 12, sy - 12, 24, sc, 180, 255 - sc)
+
+        // player square
+        drawSquare(plx - 12, ply - 12, 24, 220, 220, 220)
+
+        // midpoint marker between ball and square
+        var mx = lerp(bx, sx, 0.5)
+        var my = lerp(by, sy, 0.5)
+        drawCircle(mx, my, 7, 255, 240, 80)
+
+        // sine wave across the top of the window
+        var px = 640
+        rep px {
+            var py = 30 + sin(px * 0.04 + t * 3) * 18
+            drawPixel(px, py, 80, 200, 255)
+        }
+
+        t = t + deltaTime
     }
 }
