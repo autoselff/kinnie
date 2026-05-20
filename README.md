@@ -120,6 +120,7 @@ var div = 20 / 4
 | `mod(a, b)` | floating-point modulo |
 | `lerp(a, b, t)` | linear interpolation: `a + (b-a) * t` |
 | `distance(x1, y1, x2, y2)` | Euclidean distance between two points |
+| `sizeof(x)` | size in bytes of a value |
 
 ```kinnie
 var angle = 1.57
