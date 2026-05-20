@@ -44,6 +44,7 @@ kinnie
 *.su
 *.idb
 *.pdb
+*.cpp
 
 # Kernel Module Compile Results
 *.mod*
@@ -53,6 +54,7 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+main
 
 # debug information files
 *.dwo
