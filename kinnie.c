@@ -1316,8 +1316,8 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Compiling and running...\n");
         system(command);
     } else {
-        fprintf(stderr, "Error: kinnie can only compile .kn files to C++. Use the -c flag to compile.\n");
-        fprintf(stderr, "Usage: %s file.kn -c\n", argv[0]);
+        fprintf(stderr, "Error: kinnie can only compile .kn files to C++.\n");
+        fprintf(stderr, "Usage: %s file.kn\n", argv[0]);
     }
 
     free(source);
