@@ -1,23 +1,44 @@
 # Kinnietype
-A simple and minimalist programming language dedicated to developing small games (compiles to C++)
+## Setup
 
-## Compilation
+Important! Remember, to use the built-in graphics library, you must have the SDL library downloaded. Also, make sure you have gcc and g++ compilers installed.
 
+Debian
+```bash
+sudo apt install libsdl2-dev gcc g++
+```
+
+Arch
+```bash
+sudo pacman -S sdl2 gcc
+```
+
+Copy repository
+```bash
+gh repo clone autoselff/kinnie
+```
+```bash
+cd kinnie
+```
+
+Compile kinnie
 ```bash
 gcc -o kinnie kinnie.c
 ```
+or
+```bash
+gcc -o kinnie kinnie.c $(sdl2-config --cflags --libs)
+```
+
+Add to PATH
+```bash
+sudo cp kinnie /usr/local/bin/ && sudo chmod +x /usr/local/bin/kinnie
+```
 
 ## Running
-Important! Remember, to use the built-in graphics library, you must have the SDL library downloaded.
 ```bash
-sudo apt install libsdl2-dev
+kinnie main.kn
 ```
-
-```bash
-./kinnie main.kn
-```
-
-The `-c` flag compiles the code to C++ and runs the program.
 
 ## Language Syntax
 
