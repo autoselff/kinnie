@@ -283,9 +283,6 @@ playerX = playerX + speed * deltaTime
 **Problem:** "SDL2 not found"
 - **Solution:** Install SDL2: `sudo apt install libsdl2-dev`
 
-**Problem:** `rep` loop not working
-- **Solution:** Loop counter variable must be defined first: `var i = 0; rep 10 { ... }`
-
 **Problem:** Function doesn't return value
 - **Solution:** Use `ret value` instead of `return`
 
