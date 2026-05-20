@@ -1236,8 +1236,8 @@ int has_extension(const char *name, const char *ext) {
 
 int main(int argc, char **argv) {
     if (argc < 2 || argc > 3) {
-        fprintf(stderr, "Usage: %s file.kn [-c]\n", argv[0]);
-        fprintf(stderr, "  -c: compile and run (generates .cpp and executable)\n");
+        fprintf(stderr, "Usage: %s file.kn\n", argv[0]);
+        fprintf(stderr, "  ^ compile and run (generates .cpp and executable)\n");
         return 1;
     }
 
