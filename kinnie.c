@@ -13,6 +13,7 @@
     #define HAVE_SDL 0
 #endif
 
+#define KINNIE_VERSION "2.2.0"
 #define MAX_TOKENS 2048
 #define MAX_EXPANDED_TOKENS 8192
 #define MAX_FUNCTIONS 64
@@ -1236,17 +1237,32 @@ int has_extension(const char *name, const char *ext) {
 }
 
 int main(int argc, char **argv) {
-    if (argc < 2 || argc > 3) {
-        fprintf(stderr, "Usage: %s file.kn\n", argv[0]);
-        fprintf(stderr, "  ^ compile and run (generates .cpp and executable)\n");
+    int compile_only = 0;
+    int remove_cpp = 0;
+    char *input_file = NULL;
+
+    for (int a = 1; a < argc; a++) {
+        if (strcmp(argv[a], "--version") == 0) {
+            printf("kinnie "KINNIE_VERSION"\n");
+            return 0;
+        } else if (strcmp(argv[a], "--compile") == 0) {
+            compile_only = 1;
+        } else if (strcmp(argv[a], "--remcpp") == 0) {
+            remove_cpp = 1;
+        } else {
+            input_file = argv[a];
+        }
+    }
+
+    if (!input_file) {
+        fprintf(stderr, "Usage: %s [--version] [--compile] [--remcpp] file.kn\n", argv[0]);
         return 1;
     }
 
     Token tokens[MAX_TOKENS];
     size_t token_count;
-    int compile_and_run = argc == 2;
 
-    FILE *f = fopen(argv[1], "rb");
+    FILE *f = fopen(input_file, "rb");
     if (!f) {
         perror("fopen");
         return 1;
@@ -1292,33 +1308,39 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Warning: SDL2 not found. Install it with: sudo apt install libsdl2-dev\n");
 #endif
 
-    if (compile_and_run) {
-        char output_path[256];
-        strcpy(output_path, argv[1]);
-        size_t len = strlen(output_path);
-        if (len > 3 && strcmp(output_path + len - 3, ".kn") == 0) {
-            strcpy(output_path + len - 3, ".cpp");
-        } else {
-            strcat(output_path, ".cpp");
-        }
-        convert_to_cpp(final_tokens, final_count, output_path);
+    char output_path[256];
+    strcpy(output_path, input_file);
+    size_t len = strlen(output_path);
+    if (len > 3 && strcmp(output_path + len - 3, ".kn") == 0) {
+        strcpy(output_path + len - 3, ".cpp");
+    } else {
+        strcat(output_path, ".cpp");
+    }
+    convert_to_cpp(final_tokens, final_count, output_path);
 
-        char basename[256];
-        strcpy(basename, output_path);
-        len = strlen(basename);
-        if (len > 4 && strcmp(basename + len - 4, ".cpp") == 0) {
-            basename[len - 4] = 0;
-        }
+    char basename[256];
+    strcpy(basename, output_path);
+    len = strlen(basename);
+    if (len > 4 && strcmp(basename + len - 4, ".cpp") == 0) {
+        basename[len - 4] = 0;
+    }
 
-        char command[512];
+    char command[512];
+    if (compile_only) {
+        snprintf(command, sizeof(command),
+            "g++ -std=c++17 %s -o %s $(pkg-config --cflags --libs sdl2 2>/dev/null)",
+            output_path, basename);
+        fprintf(stderr, "Compiling...\n");
+    } else {
         snprintf(command, sizeof(command),
             "g++ -std=c++17 %s -o %s $(pkg-config --cflags --libs sdl2 2>/dev/null) && ./%s",
             output_path, basename, basename);
         fprintf(stderr, "Compiling and running...\n");
-        system(command);
-    } else {
-        fprintf(stderr, "Error: kinnie can only compile .kn files to C++.\n");
-        fprintf(stderr, "Usage: %s file.kn\n", argv[0]);
+    }
+    system(command);
+
+    if (remove_cpp) {
+        remove(output_path);
     }
 
     free(source);
