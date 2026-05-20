@@ -14,7 +14,7 @@ sudo apt install libsdl2-dev
 ```
 
 ```bash
-./kinnie main.kn -c
+./kinnie main.kn
 ```
 
 The `-c` flag compiles the code to C++ and runs the program.
@@ -124,7 +124,10 @@ else {
 ```kinnie
 var i = 5
 rep i {
-    out "{i}," // 0,1,2,3,4,
+    out "{i}," // 0,1,2,3,
+    if i == 3 {
+        stop
+    }
 }
 ```
 
