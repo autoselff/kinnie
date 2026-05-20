@@ -174,15 +174,27 @@ fun main() {
 
 Arrays passed to functions are always passed as originals (by reference). Modifications inside the function affect the original array:
 ```kinnie
-fun doubleFirst(arr) {
-    arr[0] = arr[0] * 2
+fun foo(t) {
+    var l = t.len - 1
+    rep l {
+        var temp = l + 1
+        t[l] = t[l] + t[temp]
+    }
+}
+
+fun sho(t) {
+    var l = t.len
+    rep l {
+        out "{t[l]}\n"
+    }
 }
 
 fun main() {
-    var nums = [5, 10, 15]
-    doubleFirst(nums)
-    out "{nums[0]}\n"
+    var tab = [100, 200, 300, 400, 500]
+    foo(tab)
+    sho(tab)
 }
+
 ```
 
 The compiler detects array parameters automatically — no special syntax needed.
