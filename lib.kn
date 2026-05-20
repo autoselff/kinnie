@@ -1,0 +1,56 @@
+fun min(a, b) {
+    if a < b {
+        ret a
+    } else {
+        ret b
+    }
+}
+
+fun max(a, b) {
+    if a > b {
+        ret a
+    } else {
+        ret b
+    }
+}
+
+fun distance(x1, y1, x2, y2) {
+    var dx = x2 - x1
+    var dy = y2 - y1
+    ret dx * dx + dy * dy
+}
+
+fun isColliding(x1, y1, size1, x2, y2, size2) {
+    var dx = x2 - x1
+    var dy = y2 - y1
+    var sumSize = size1 + size2
+    if dx * dx + dy * dy < sumSize * sumSize {
+        ret 1
+    } else {
+        ret 0
+    }
+}
+
+fun drawSquare(x, y, size, r, g, b) {
+    var px = x
+    var py = y
+    var s = size
+    var col = 0
+    rep s {
+        var row = 0
+        var s2 = size
+        rep s2 {
+            drawPixel(px + col, py + row, r, g, b)
+            row = row + 1
+        }
+        col = col + 1
+    }
+}
+
+fun lerp(a, b, t) {
+    ret a + (b - a) * t
+}
+
+fun mod(x, y) {
+    ret x - y * (x / y)
+}
