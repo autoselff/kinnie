@@ -1,4 +1,4 @@
-# Kinnietype
+# Kinnie
 ## Setup
 
 **Important! Remember, to use the built-in graphics library, you must have the SDL library installed. Also, make sure you have gcc and g++ compilers installed. Kinnie does not support the underscore character in variable and function names.**
