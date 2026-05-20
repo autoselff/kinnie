@@ -416,6 +416,7 @@ static const char *map_builtin(const char *name) {
     if (strcmp(name, "distance") == 0) return "_distance";
     if (strcmp(name, "mod")      == 0) return "std::fmod";
     if (strcmp(name, "random")   == 0) return "_random";
+    if (strcmp(name, "sizeof")   == 0) return "sizeof";
     return NULL;
 }
 
