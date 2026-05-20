@@ -79,9 +79,9 @@ Array in loops:
 ```kinnie
 ```kinnie
 var tab = [10, 11, 12, 13, 4235]
-var len = tab.len
-rep len {
-    out "{tab[len]}\n"
+var l = len(tab)
+rep l {
+    out "{tab[l]}\n"
 }
 ```
 
@@ -220,7 +220,7 @@ fun main() {
 Arrays passed to functions are always passed as originals (by reference). Modifications inside the function affect the original array:
 ```kinnie
 fun foo(t) {
-    var l = t.len - 1
+    var l = len(t) - 1
     rep l {
         var temp = l + 1
         t[l] = t[l] + t[temp]
@@ -228,7 +228,7 @@ fun foo(t) {
 }
 
 fun sho(t) {
-    var l = t.len
+    var l = len(t)
     rep l {
         out "{t[l]}\n"
     }

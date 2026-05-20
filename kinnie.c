@@ -340,6 +340,13 @@ static size_t emit_value(Token tokens[], size_t i, FILE *out) {
     }
 
     if (tokens[i].type == TOK_IDENT) {
+        if (tokens[i + 1].type == TOK_LBRACKET && strcmp(tokens[i].text, "len") == 0) {
+            i += 2;
+            fprintf(out, "%s.size()", tokens[i].text);
+            if (tokens[i + 1].type == TOK_RBRACKET) i += 2;
+            else i++;
+            return i;
+        }
         if (tokens[i + 1].type == TOK_LBRACKET && strcmp(tokens[i].text, "random") == 0) {
             fputs("_random(", out);
             i += 2;
@@ -375,10 +382,6 @@ static size_t emit_value(Token tokens[], size_t i, FILE *out) {
             if (tokens[i].type == TOK_RSQUARE) i++;
             fputs(")]", out);
             return i;
-        }
-        if (tokens[i + 1].type == TOK_DOT && tokens[i + 2].type == TOK_IDENT && strcmp(tokens[i + 2].text, "len") == 0) {
-            fprintf(out, "%s.size()", tokens[i].text);
-            return i + 3;
         }
         fputs(tokens[i].text, out);
         return i + 1;
@@ -430,6 +433,8 @@ static size_t parse_call_args(Token tokens[], size_t i, char bufs[][ARG_BUF_LEN]
                     case TOK_MUL: part = " * "; break;
                     case TOK_DIV: part = " / "; break;
                     case TOK_MOD: part = " % "; break;
+                    case TOK_LSQUARE: part = "[(int)("; break;
+                    case TOK_RSQUARE: part = ")]"; break;
                     default: break;
                 }
                 if (part) bi += snprintf(buf + bi, ARG_BUF_LEN - bi, "%s", part);
@@ -623,6 +628,15 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
                 }
                 if (tokens[i].type == TOK_RSQUARE) i++;
                 fputs("};\n", out);
+                continue;
+            }
+
+            if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET && strcmp(tokens[i].text, "len") == 0) {
+                i += 2;
+                fprintf(out, "double %s = %s.size()", name, tokens[i].text);
+                if (tokens[i + 1].type == TOK_RBRACKET) i += 2;
+                else i++;
+                fputs(";\n", out);
                 continue;
             }
 
@@ -828,6 +842,7 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
                 size_t el = 0;
                 for (size_t ei = expr_start; ei < expr_end; ei++) {
                     Token *et = &tokens[ei];
+                    if (et->type == TOK_IDENT && strcmp(et->text, "len") == 0 && ei + 3 < expr_end && tokens[ei + 1].type == TOK_LBRACKET && tokens[ei + 2].type == TOK_IDENT && tokens[ei + 3].type == TOK_RBRACKET) { el += snprintf(expr + el, sizeof(expr) - el, "%s.size()", tokens[ei + 2].text); ei += 3; continue; }
                     const char *part = "";
                     if (et->type == TOK_IDENT || et->type == TOK_NUMBER) part = et->text;
                     else if (et->type == TOK_PLUS) part = " + ";
@@ -835,7 +850,6 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
                     else if (et->type == TOK_MUL) part = " * ";
                     else if (et->type == TOK_DIV) part = " / ";
                     else if (et->type == TOK_MOD) part = " % ";
-                    else if (et->type == TOK_DOT && ei + 1 < expr_end && tokens[ei + 1].type == TOK_IDENT && strcmp(tokens[ei + 1].text, "len") == 0) { part = ".size()"; ei++; }
                     el += snprintf(expr + el, sizeof(expr) - el, "%s", part);
                 }
                 int idx = loop_idx++;
@@ -916,6 +930,9 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path)
         "double _lerp(double a, double b, double t) { return a + (b - a) * t; }\n"
         "double _distance(double x1, double y1, double x2, double y2) {\n"
         "    return std::sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));\n"
+        "}\n"
+        "double len(_KnTable& table) {\n"
+        "    return table.size();\n"
         "}\n\n",
         out);
 
