@@ -1026,7 +1026,7 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path)
     FILE *out = fopen(output_path, "w");
     if (!out) { perror("fopen"); exit(1); }
 
-    fprintf(out, "#include <iostream>\n#include <string>\n#include <cstring>\n#include <vector>\n#include <random>\n");
+    fprintf(out, "#include <iostream>\n#include <string>\n#include <cstring>\n#include <vector>\n#include <random>\n#include <iomanip>\n");
 #if HAVE_SDL
     fprintf(out, "#include <SDL2/SDL.h>\n");
 #endif
