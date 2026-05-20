@@ -412,8 +412,8 @@ static size_t parse_call_args(Token tokens[], size_t i, char bufs[][ARG_BUF_LEN]
 
     int arg = 0;
     while (arg < max_args && tokens[i].type != TOK_RBRACKET && tokens[i].type != TOK_EOF) {
-        char  *buf = bufs[arg];
-        size_t bi  = 0;
+        char *buf = bufs[arg];
+        size_t bi = 0;
 
         if (tokens[i].type == TOK_STRING) {
             bi += snprintf(buf + bi, ARG_BUF_LEN - bi, "\"%s\"", tokens[i].text);
@@ -696,7 +696,7 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
         }
 
         if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET) {
-            const char *m  = map_builtin(tokens[i].text);
+            const char *m = map_builtin(tokens[i].text);
             const char *fn = m ? m : tokens[i].text;
             i += 2;
             write_indent(out, indent);
@@ -762,7 +762,7 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             if (tokens[i].type == TOK_LBRACE) i++;
 
             size_t end = find_block_end(tokens, token_count, i);
-            Token  block[MAX_TOKENS];
+            Token block[MAX_TOKENS];
             size_t bc = copy_block(tokens, i, end, block);
             convert_tokens_to_cpp(block, bc, out, indent + 1, is_main);
             i = end + 1;
@@ -793,11 +793,11 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             int is_simple_ident = (expr_end - expr_start == 1 && tokens[expr_start].type == TOK_IDENT);
 
             size_t loop_end = find_block_end(tokens, token_count, i);
-            Token  loop_tokens[MAX_TOKENS];
+            Token loop_tokens[MAX_TOKENS];
             size_t lc = copy_block(tokens, i, loop_end, loop_tokens);
 
             if (is_main && sdl_window_created) {
-                write_indent(out, indent);     fputs("{\n", out);
+                write_indent(out, indent); fputs("{\n", out);
                 write_indent(out, indent + 1); fputs("bool _running = true;\n", out);
                 write_indent(out, indent + 1); fputs("SDL_Event _event;\n", out);
                 write_indent(out, indent + 1); fputs("_last_frame_time = SDL_GetTicks();\n", out);
@@ -814,7 +814,7 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
                 convert_tokens_to_cpp(loop_tokens, lc, out, indent + 2, 0);
                 write_indent(out, indent + 2); fputs("SDL_RenderPresent(_renderer);\n", out);
                 write_indent(out, indent + 1); fputs("}\n", out);
-                write_indent(out, indent);     fputs("}\n", out);
+                write_indent(out, indent); fputs("}\n", out);
             } else if (is_simple_ident) {
                 const char *c = tokens[expr_start].text;
                 write_indent(out, indent);
@@ -824,21 +824,18 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
                 fputs("} }\n", out);
             } else {
                 static int loop_idx = 0;
-                char   expr[256] = "";
+                char expr[256] = "";
                 size_t el = 0;
                 for (size_t ei = expr_start; ei < expr_end; ei++) {
                     Token *et = &tokens[ei];
                     const char *part = "";
-                    if      (et->type == TOK_IDENT || et->type == TOK_NUMBER) part = et->text;
-                    else if (et->type == TOK_PLUS)  part = " + ";
+                    if (et->type == TOK_IDENT || et->type == TOK_NUMBER) part = et->text;
+                    else if (et->type == TOK_PLUS) part = " + ";
                     else if (et->type == TOK_MINUS) part = " - ";
-                    else if (et->type == TOK_MUL)   part = " * ";
-                    else if (et->type == TOK_DIV)   part = " / ";
-                    else if (et->type == TOK_MOD)   part = " % ";
-                    else if (et->type == TOK_DOT && ei + 1 < expr_end && tokens[ei + 1].type == TOK_IDENT && strcmp(tokens[ei + 1].text, "len") == 0) {
-                        part = ".size()";
-                        ei++;
-                    }
+                    else if (et->type == TOK_MUL) part = " * ";
+                    else if (et->type == TOK_DIV) part = " / ";
+                    else if (et->type == TOK_MOD) part = " % ";
+                    else if (et->type == TOK_DOT && ei + 1 < expr_end && tokens[ei + 1].type == TOK_IDENT && strcmp(tokens[ei + 1].text, "len") == 0) { part = ".size()"; ei++; }
                     el += snprintf(expr + el, sizeof(expr) - el, "%s", part);
                 }
                 int idx = loop_idx++;
@@ -952,7 +949,7 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path)
         "        SDL_RenderDrawPoint(r,cx-x,cy-y); SDL_RenderDrawPoint(r,cx-y,cy-x);\n"
         "        SDL_RenderDrawPoint(r,cx+y,cy-x); SDL_RenderDrawPoint(r,cx+x,cy-y);\n"
         "        if (err <= 0) { y++; err += 2*y+1; }\n"
-        "        else          { x--; err -= 2*x+1; }\n"
+        "        else { x--; err -= 2*x+1; }\n"
         "    }\n"
         "}\n\n",
         out);
@@ -1041,13 +1038,13 @@ int main(int argc, char **argv) {
     Token  tokens[MAX_TOKENS];
     size_t token_count = tokenize(source, tokens);
 
-    Token  expanded[MAX_EXPANDED_TOKENS];
+    Token expanded[MAX_EXPANDED_TOKENS];
     Token *final_tokens = tokens;
-    size_t final_count  = token_count;
+    size_t final_count = token_count;
     for (size_t i = 0; i < token_count; i++) {
         if (tokens[i].type == TOK_ADD) {
             memset(expanded, 0, sizeof(expanded));
-            final_count  = process_includes(tokens, token_count, expanded, MAX_EXPANDED_TOKENS);
+            final_count = process_includes(tokens, token_count, expanded, MAX_EXPANDED_TOKENS);
             final_tokens = expanded;
             break;
         }
