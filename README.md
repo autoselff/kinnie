@@ -40,6 +40,13 @@ sudo cp kinnie /usr/local/bin/ && sudo chmod +x /usr/local/bin/kinnie
 kinnie main.kn
 ```
 
+### Command-line Flags
+
+- `--version` — Display version information
+- `--compile` — Compile only, do not run the generated executable
+- `--remcpp` — Remove the generated C++ file after compilation
+- `--stime` — Show compilation time statistics for each stage (tokenization, includes, parsing, codegen, C++ compilation)
+
 ## Language Syntax
 
 ### Variables
