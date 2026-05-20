@@ -211,11 +211,6 @@ clearScreen(r, g, b)
 
 Parameters: RGB values (0-255)
 
-### Draw Pixel
-
-```kinnie
-drawPixel(x, y, r, g, b)
-```
 
 ### Geometry and Collision Functions
 
