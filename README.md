@@ -1,7 +1,7 @@
-# Kinnietype
+# Kinnie
 ## Setup
 
-Important! Remember, to use the built-in graphics library, you must have the SDL library downloaded. Also, make sure you have gcc and g++ compilers installed. For text rendering with `drawText()`, you need SDL_ttf. Kinnie does not support the underscore character in variable and function names.
+**Important! Remember, to use the built-in graphics library, you must have the SDL library downloaded. Also, make sure you have gcc and g++ compilers installed. For text rendering with `drawText()`, you need SDL_ttf. Kinnie does not support the underscore character in variable and function names.**
 
 Debian
 ```bash
