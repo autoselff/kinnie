@@ -305,8 +305,6 @@ Draws text using system fonts. Requires SDL2_ttf library.
 drawText(50, 50, "Hello World", 24, 255, 255, 255)  // white text at (50,50), size 24
 ```
 
-Text rendering uses available system fonts (DejaVuSans on Linux, Arial on macOS, arial.ttf on Windows).
-
 ### Random Functions
 
 #### `random(min, max)` → number
