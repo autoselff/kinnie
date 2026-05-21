@@ -1,16 +1,16 @@
 # Kinnietype
 ## Setup
 
-Important! Remember, to use the built-in graphics library, you must have the SDL library downloaded. Also, make sure you have gcc and g++ compilers installed. Kinnie does not support the underscore character in variable and function names.
+Important! Remember, to use the built-in graphics library, you must have the SDL library downloaded. Also, make sure you have gcc and g++ compilers installed. For text rendering with `drawText()`, you need SDL_ttf. Kinnie does not support the underscore character in variable and function names.
 
 Debian
 ```bash
-sudo apt install libsdl2-dev gcc g++
+sudo apt install libsdl2-dev libsdl2-ttf-dev gcc g++
 ```
 
 Arch
 ```bash
-sudo pacman -S sdl2 gcc
+sudo pacman -S sdl2 sdl2_ttf gcc
 ```
 
 Copy repository
@@ -293,6 +293,20 @@ Draws a circle outline using the midpoint circle algorithm.
 drawCircle(200, 150, 40, 0, 255, 0)  // green circle at (200,150), radius 40
 ```
 
+### Text
+
+```kinnie
+setFont("path/to/font.ttf")
+```
+
+#### `drawText(x, y, text, size, r, g, b)`
+Draws text using system fonts. Requires SDL2_ttf library.
+```kinnie
+drawText(50, 50, "Hello World", 24, 255, 255, 255)  // white text at (50,50), size 24
+```
+
+Text rendering uses available system fonts (DejaVuSans on Linux, Arial on macOS, arial.ttf on Windows).
+
 ### Random Functions
 
 #### `random(min, max)` → number
@@ -334,7 +348,14 @@ playerX = playerX + speed * deltaTime
 ## Common Issues
 
 **Problem:** "SDL2 not found"
-- **Solution:** Install SDL2: `sudo apt install libsdl2-dev`
+- **Solution:** Install SDL2:
+  - Debian: `sudo apt install libsdl2-dev`
+  - Arch: `sudo pacman -S sdl2`
+
+**Problem:** `drawText()` doesn't render text
+- **Solution:** Install SDL2_ttf library:
+  - Debian: `sudo apt install libsdl2-ttf-dev`
+  - Arch: `sudo pacman -S sdl2_ttf`
 
 **Problem:** Function doesn't return value
 - **Solution:** Use `ret value` instead of `return`

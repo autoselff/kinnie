@@ -11,8 +11,15 @@
 #  else
 #    define HAVE_SDL 0
 #  endif
+#  if __has_include(<SDL2/SDL_ttf.h>)
+#    include <SDL2/SDL_ttf.h>
+#    define HAVE_SDL_TTF 1
+#  else
+#    define HAVE_SDL_TTF 0
+#  endif
 #else
 #  define HAVE_SDL 0
+#  define HAVE_SDL_TTF 0
 #endif
 
 #define KINNIE_VERSION "2.2.2"
@@ -569,6 +576,12 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             fprintf(out, "_window = SDL_CreateWindow(%s, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, %s, %s, SDL_WINDOW_SHOWN);\n", b[2], b[0], b[1]);
             write_indent(out, indent);
             fputs("_renderer = SDL_CreateRenderer(_window, -1, SDL_RENDERER_ACCELERATED);\n", out);
+            write_indent(out, indent);
+            fputs("#ifdef SDL_TTF_H_\n", out);
+            write_indent(out, indent);
+            fputs("TTF_Init();\n", out);
+            write_indent(out, indent);
+            fputs("#endif\n", out);
             sdl_window_created = 1;
             continue;
         }
@@ -621,6 +634,15 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             i = parse_call_args(tokens, i, b, 6);
             write_indent(out, indent);
             fprintf(out, "_drawCircle(_renderer, (int)(%s),(int)(%s),(int)(%s),(int)(%s),(int)(%s),(int)(%s));\n", b[0], b[1], b[2], b[3], b[4], b[5]);
+            continue;
+        }
+
+        if (is_builtin_call(tokens, i, "drawText")) {
+            i += 2;
+            char b[7][ARG_BUF_LEN];
+            i = parse_call_args(tokens, i, b, 7);
+            write_indent(out, indent);
+            fprintf(out, "_drawText(_renderer, (int)(%s),(int)(%s),%s,(int)(%s),%s,%s,%s);\n", b[0], b[1], b[2], b[3], b[4], b[5], b[6]);
             continue;
         }
 
@@ -732,6 +754,15 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             fprintf(out, "%s = ", name);
             i = emit_expression(tokens, i, out);
             fputs(";\n", out);
+            continue;
+        }
+
+        if (is_builtin_call(tokens, i, "setFont")) {
+            i += 2;
+            char b[1][ARG_BUF_LEN];
+            i = parse_call_args(tokens, i, b, 1);
+            write_indent(out, indent);
+            fprintf(out, "_font_path = %s;\n", b[0]);
             continue;
         }
 
@@ -938,6 +969,9 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
 #if HAVE_SDL
     fputs("#include <SDL2/SDL.h>\n", out);
 #endif
+#if HAVE_SDL_TTF
+    fputs("#include <SDL2/SDL_ttf.h>\n", out);
+#endif
 
     fputs(
         "\n"
@@ -975,7 +1009,8 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "int _key_state[512] = {0};\n"
         "int _prev_key_state[512] = {0};\n"
         "double deltaTime = 0.0;\n"
-        "Uint32 _last_frame_time = 0;\n\n"
+        "Uint32 _last_frame_time = 0;\n"
+        "std::string _font_path = \"\";\n\n"
         "bool _key_pressed(const char *key_name) {\n"
         "    SDL_Keycode kc = SDL_GetKeyFromName(key_name);\n"
         "    if (kc == SDLK_UNKNOWN) return false;\n"
@@ -1000,7 +1035,31 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "        if (err <= 0) { y++; err += 2*y+1; }\n"
         "        else { x--; err -= 2*x+1; }\n"
         "    }\n"
-        "}\n\n",
+        "}\n\n"
+        "#ifdef SDL_TTF_H_\n"
+        "void _drawText(SDL_Renderer *r, int x, int y, const char *text, int size,\n"
+        "               int red, int green, int blue) {\n"
+        "    TTF_Font *font = nullptr;\n"
+        "    if (!_font_path.empty()) font = TTF_OpenFont(_font_path.c_str(), size);\n"
+        "    if (!font) font = TTF_OpenFont(\"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf\", size);\n"
+        "    if (!font) font = TTF_OpenFont(\"/System/Library/Fonts/Arial.ttf\", size);\n"
+        "    if (!font) font = TTF_OpenFont(\"C:\\\\\\\\Windows\\\\\\\\Fonts\\\\\\\\arial.ttf\", size);\n"
+        "    if (!font) return;\n"
+        "    SDL_Color color = {(Uint8)red, (Uint8)green, (Uint8)blue, 255};\n"
+        "    SDL_Surface *surf = TTF_RenderText_Solid(font, text, color);\n"
+        "    if (surf) {\n"
+        "        SDL_Texture *tex = SDL_CreateTextureFromSurface(r, surf);\n"
+        "        SDL_Rect rect = {x, y, surf->w, surf->h};\n"
+        "        SDL_RenderCopy(r, tex, nullptr, &rect);\n"
+        "        SDL_DestroyTexture(tex);\n"
+        "        SDL_FreeSurface(surf);\n"
+        "    }\n"
+        "    TTF_CloseFont(font);\n"
+        "}\n"
+        "#else\n"
+        "void _drawText(SDL_Renderer *r, int x, int y, const char *text, int size,\n"
+        "               int red, int green, int blue) { (void)r; (void)x; (void)y; (void)text; (void)size; (void)red; (void)green; (void)blue; }\n"
+        "#endif\n\n",
         out);
 #endif
 
@@ -1029,6 +1088,9 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
             fputs(
                 "    SDL_DestroyRenderer(_renderer);\n"
                 "    SDL_DestroyWindow(_window);\n"
+                "#ifdef SDL_TTF_H_\n"
+                "    TTF_Quit();\n"
+                "#endif\n"
                 "    SDL_Quit();\n",
                 out);
         }
@@ -1136,7 +1198,7 @@ int main(int argc, char **argv) {
         basename[len - 4] = '\0';
 
     char compile_cmd[512];
-    snprintf(compile_cmd, sizeof(compile_cmd), "g++ -std=c++17 %s -o %s $(pkg-config --cflags --libs sdl2 2>/dev/null)", output_path, basename);
+    snprintf(compile_cmd, sizeof(compile_cmd), "g++ -std=c++17 %s -o %s $(pkg-config --cflags --libs sdl2 SDL2_ttf 2>/dev/null)", output_path, basename);
 
     fprintf(stderr, "Compiling...\n");
     t0 = get_time_ms();

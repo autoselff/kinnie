@@ -1,5 +1,6 @@
 fun main() {
     createWindow(640, 480, "Kinnie Demo")
+    setFont("/usr/share/fonts/Adwaita/AdwaitaMono-Regular.ttf")
 
     var t = 0
     var ball = [320, 240]
@@ -61,6 +62,10 @@ fun main() {
             var py = 30 + sin(px * 0.04 + t * 3) * 18
             drawPixel(px, py, 80, 200, 255)
         }
+
+        // draw score text
+        drawText(20, 20, "Hello", 20, 255, 255, 255)
+        drawText(520, 20, "Kinnie", 18, 255, 200, 100)
 
         t = t + deltaTime
     }
