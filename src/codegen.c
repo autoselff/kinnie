@@ -22,20 +22,22 @@ static void write_indent(FILE *out, int indent) {
 
 // Maps Kinnie built-in function names to their C++ equivalents.
 static const char *map_builtin(const char *name) {
-    if (!strcmp(name, "sin"))    return "std::sin";
-    if (!strcmp(name, "cos"))    return "std::cos";
-    if (!strcmp(name, "abs"))    return "std::fabs";
-    if (!strcmp(name, "exp"))    return "std::exp";
-    if (!strcmp(name, "log"))    return "std::logf";
-    if (!strcmp(name, "log10"))  return "std::log10f";
-    if (!strcmp(name, "pow"))    return "std::pow";
-    if (!strcmp(name, "min"))    return "std::min<double>";
-    if (!strcmp(name, "max"))    return "std::max<double>";
-    if (!strcmp(name, "lerp"))   return "_lerp";
-    if (!strcmp(name, "distance")) return "_distance";
-    if (!strcmp(name, "mod"))    return "std::fmod";
-    if (!strcmp(name, "random")) return "_random";
-    if (!strcmp(name, "sizeof")) return "sizeof";
+    if (!strcmp(name, "sin"))       return "std::sin";
+    if (!strcmp(name, "cos"))       return "std::cos";
+    if (!strcmp(name, "abs"))       return "std::fabs";
+    if (!strcmp(name, "exp"))       return "std::exp";
+    if (!strcmp(name, "log"))       return "std::logf";
+    if (!strcmp(name, "log10"))     return "std::log10f";
+    if (!strcmp(name, "pow"))       return "std::pow";
+    if (!strcmp(name, "sqrt"))      return "std::sqrt";
+    if (!strcmp(name, "min"))       return "std::min<double>";
+    if (!strcmp(name, "max"))       return "std::max<double>";
+    if (!strcmp(name, "lerp"))      return "_lerp";
+    if (!strcmp(name, "distance"))  return "_distance";
+    if (!strcmp(name, "mod"))       return "std::fmod";
+    if (!strcmp(name, "random"))    return "_random";
+    if (!strcmp(name, "sizeof"))    return "sizeof";
+    if (!strcmp(name, "makeMatrix")) return "_makeMatrix";
     return NULL;
 }
 
@@ -73,9 +75,17 @@ static size_t emit_value(Token tokens[], size_t i, FILE *out) {
     if (tokens[i].type == TOK_IDENT) {
         if (tokens[i + 1].type == TOK_LBRACKET && strcmp(tokens[i].text, "len") == 0) {
             i += 2;
-            fprintf(out, "%s.size()", tokens[i].text);
-            if (tokens[i + 1].type == TOK_RBRACKET) i += 2;
-            else i++;
+            if (tokens[i + 1].type == TOK_LSQUARE) {
+                fprintf(out, "%s[(int)(", tokens[i].text);
+                i += 2;
+                i = emit_expression(tokens, i, out);
+                if (tokens[i].type == TOK_RSQUARE) i++;
+                fputs(")].size()", out);
+            } else {
+                fprintf(out, "%s.size()", tokens[i].text);
+                i++;
+            }
+            if (tokens[i].type == TOK_RBRACKET) i++;
             return i;
         }
         if (tokens[i + 1].type == TOK_LBRACKET && strcmp(tokens[i].text, "random") == 0) {
@@ -112,6 +122,13 @@ static size_t emit_value(Token tokens[], size_t i, FILE *out) {
             i = emit_expression(tokens, i, out);
             if (tokens[i].type == TOK_RSQUARE) i++;
             fputs(")]", out);
+            if (tokens[i].type == TOK_LSQUARE) {
+                fputs("[(int)(", out);
+                i++;
+                i = emit_expression(tokens, i, out);
+                if (tokens[i].type == TOK_RSQUARE) i++;
+                fputs(")]", out);
+            }
             return i;
         }
         if (tokens[i + 1].type == TOK_DOT && tokens[i + 2].type == TOK_IDENT) {
@@ -274,6 +291,26 @@ static int param_is_array(const char *param_name, Token tokens[], size_t token_c
     return 0;
 }
 
+static int param_is_2d_array(const char *param_name, Token tokens[], size_t token_count) {
+    for (size_t i = 0; i + 1 < token_count; i++) {
+        if (tokens[i].type == TOK_IDENT && strcmp(tokens[i].text, param_name) == 0
+                && tokens[i + 1].type == TOK_LSQUARE) {
+            size_t j = i + 2;
+            while (j < token_count && tokens[j].type != TOK_RSQUARE && tokens[j].type != TOK_EOF) j++;
+            if (j + 1 < token_count && tokens[j + 1].type == TOK_LSQUARE) return 1;
+        }
+        if (tokens[i].type == TOK_IDENT && strcmp(tokens[i].text, "len") == 0
+                && i + 3 < token_count
+                && tokens[i + 1].type == TOK_LBRACKET
+                && tokens[i + 2].type == TOK_IDENT
+                && strcmp(tokens[i + 2].text, param_name) == 0
+                && tokens[i + 3].type == TOK_LSQUARE) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static const char *param_struct_type(const char *param_name, Token tokens[], size_t token_count) {
     for (size_t i = 0; i + 2 < token_count; i++) {
         if (tokens[i].type == TOK_IDENT
@@ -300,7 +337,9 @@ static void emit_func_signature(FILE *out, Function *f) {
     fprintf(out, "%s %s(", ret, f->name);
     for (size_t pi = 0; pi < f->param_count; pi++) {
         if (pi > 0) fputs(", ", out);
-        if (param_is_array(f->param_names[pi], f->tokens, f->token_count)) {
+        if (param_is_2d_array(f->param_names[pi], f->tokens, f->token_count)) {
+            fprintf(out, "_KnTable2D& %s", f->param_names[pi]);
+        } else if (param_is_array(f->param_names[pi], f->tokens, f->token_count)) {
             fprintf(out, "_KnTable& %s", f->param_names[pi]);
         } else {
             const char *ct = param_struct_type(f->param_names[pi], f->tokens, f->token_count);
@@ -434,8 +473,49 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             i += 3;
             write_indent(out, indent);
 
+            if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET
+                    && strcmp(tokens[i].text, "makeMatrix") == 0) {
+                i += 2;
+                fprintf(out, "_KnTable2D %s = _makeMatrix(", name);
+                i = emit_call_args_inline(tokens, i, out);
+                fputs(";\n", out);
+                continue;
+            }
+
             if (tokens[i].type == TOK_LSQUARE) {
                 i++;
+                if (tokens[i].type == TOK_LSQUARE) {
+                    fprintf(out, "_KnTable2D %s = {", name);
+                    int first_row = 1;
+                    while (tokens[i].type != TOK_RSQUARE && tokens[i].type != TOK_EOF) {
+                        if (tokens[i].type == TOK_LSQUARE) {
+                            if (!first_row) fputs(", ", out);
+                            first_row = 0;
+                            fputs("{", out);
+                            i++;
+                            int first_col = 1;
+                            while (tokens[i].type != TOK_RSQUARE && tokens[i].type != TOK_EOF) {
+                                if (!first_col) fputs(", ", out);
+                                first_col = 0;
+                                if (tokens[i].type == TOK_STRING) {
+                                    fprintf(out, "\"%s\"", tokens[i].text);
+                                    i++;
+                                } else {
+                                    i = emit_expression(tokens, i, out);
+                                }
+                                if (tokens[i].type == TOK_COMMA) i++;
+                            }
+                            if (tokens[i].type == TOK_RSQUARE) i++;
+                            fputs("}", out);
+                        } else {
+                            i++;
+                        }
+                        if (tokens[i].type == TOK_COMMA) i++;
+                    }
+                    if (tokens[i].type == TOK_RSQUARE) i++;
+                    fputs("};\n", out);
+                    continue;
+                }
                 fprintf(out, "_KnTable %s = {", name);
                 int first = 1;
                 while (tokens[i].type != TOK_RSQUARE && tokens[i].type != TOK_EOF) {
@@ -457,10 +537,20 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET
                     && strcmp(tokens[i].text, "len") == 0) {
                 i += 2;
-                fprintf(out, "double %s = %s.size()", name, tokens[i].text);
-                if (tokens[i + 1].type == TOK_RBRACKET) i += 2;
-                else i++;
-                fputs(";\n", out);
+                if (tokens[i + 1].type == TOK_LSQUARE) {
+                    char arrname[MAX_NAME_LEN];
+                    strcpy(arrname, tokens[i].text);
+                    i += 2;
+                    fprintf(out, "double %s = %s[(int)(", name, arrname);
+                    i = emit_expression(tokens, i, out);
+                    if (tokens[i].type == TOK_RSQUARE) i++;
+                    fputs(")].size();\n", out);
+                } else {
+                    fprintf(out, "double %s = %s.size()", name, tokens[i].text);
+                    i++;
+                    fputs(";\n", out);
+                }
+                if (tokens[i].type == TOK_RBRACKET) i++;
                 continue;
             }
 
@@ -501,6 +591,12 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             fprintf(out, "%s[(int)(", name);
             i = emit_expression(tokens, i, out);
             if (tokens[i].type == TOK_RSQUARE) i++;
+            if (tokens[i].type == TOK_LSQUARE) {
+                fputs(")][(int)(", out);
+                i++;
+                i = emit_expression(tokens, i, out);
+                if (tokens[i].type == TOK_RSQUARE) i++;
+            }
             if (tokens[i].type == TOK_ASSIGN) i++;
             fputs(")] = ", out);
             if (tokens[i].type == TOK_STRING) {
@@ -806,7 +902,11 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "        return os << v._n;\n"
         "    }\n"
         "};\n"
-        "using _KnTable = std::vector<_KnVal>;\n\n"
+        "using _KnTable = std::vector<_KnVal>;\n"
+        "using _KnTable2D = std::vector<_KnTable>;\n"
+        "_KnTable2D _makeMatrix(double rows, double cols) {\n"
+        "    return _KnTable2D((size_t)rows, _KnTable((size_t)cols, 0.0));\n"
+        "}\n\n"
         "std::mt19937 _rng(std::random_device{}());\n"
         "double _random(double min, double max) {\n"
         "    std::uniform_real_distribution<double> dist(min, max);\n"
@@ -899,7 +999,9 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
             fprintf(out, "    %s %s(", ret_str, m->name);
             for (size_t pi = 0; pi < m->param_count; pi++) {
                 if (pi > 0) fputs(", ", out);
-                if (param_is_array(m->param_names[pi], m->tokens, m->token_count))
+                if (param_is_2d_array(m->param_names[pi], m->tokens, m->token_count))
+                    fprintf(out, "_KnTable2D& %s", m->param_names[pi]);
+                else if (param_is_array(m->param_names[pi], m->tokens, m->token_count))
                     fprintf(out, "_KnTable& %s", m->param_names[pi]);
                 else {
                     const char *ct = param_struct_type(m->param_names[pi], m->tokens, m->token_count);
