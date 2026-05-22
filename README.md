@@ -5,12 +5,12 @@
 
 Debian
 ```bash
-sudo apt install libsdl2-dev libsdl2-ttf-dev gcc g++
+sudo apt install cmake libsdl2-dev libsdl2-ttf-dev gcc g++
 ```
 
 Arch
 ```bash
-sudo pacman -S sdl2 sdl2_ttf gcc
+sudo pacman -S cmake sdl2 sdl2_ttf gcc
 ```
 
 Copy repository
@@ -21,16 +21,17 @@ gh repo clone autoselff/kinnie
 cd kinnie
 ```
 
-Compile kinnie
+Compile kinnie (CMake — recommended)
 ```bash
-gcc -o kinnie kinnie.c
-```
-or
-```bash
-gcc -o kinnie kinnie.c $(sdl2-config --cflags --libs)
+cmake -B build
+cmake --build build
 ```
 
 Add to PATH
+```bash
+sudo cmake --install build
+```
+or manually
 ```bash
 sudo cp kinnie /usr/local/bin/ && sudo chmod +x /usr/local/bin/kinnie
 ```
