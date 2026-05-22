@@ -1,69 +1,87 @@
+str Ball {
+    var x = 320
+    var y = 240
+    var vx = 160
+    var vy = 110
+
+    fun update() {
+        x = x + vx * deltaTime
+        y = y + vy * deltaTime
+        if x > 620 { vx = 0 - abs(vx) }
+        if x < 20 { vx = abs(vx) }
+        if y > 460 { vy = 0 - abs(vy) }
+        if y < 20 { vy = abs(vy) }
+    }
+}
+
+str Player {
+    var x = 320
+    var y = 400
+    var spd = 220
+
+    fun update() {
+        if keyDown("right") { x = x + spd * deltaTime }
+        if keyDown("left") { x = x - spd * deltaTime }
+        if keyDown("down") { y = y + spd * deltaTime }
+        if keyDown("up") { y = y - spd * deltaTime }
+        x = min(max(x, 12), 628)
+        y = min(max(y, 12), 468)
+    }
+}
+
 fun main() {
     createWindow(640, 480, "Kinnie Demo")
     setFont("/usr/share/fonts/Adwaita/AdwaitaMono-Regular.ttf")
 
+    str Ball ball
+    str Player player
+
     var t = 0
-    var ball = [320, 240]
-    var vel = [160, 110]
-    var player = [320, 400]
-    var spd = 220
 
     rep 1 {
         clearScreen(10, 10, 25)
 
-        // player movement (arrow keys), clamped to window
-        if keyDown("right") { player[0] = player[0] + spd * deltaTime }
-        if keyDown("left") { player[0] = player[0] - spd * deltaTime }
-        if keyDown("down") { player[1] = player[1] + spd * deltaTime }
-        if keyDown("up") { player[1] = player[1] - spd * deltaTime }
-        player[0] = min(max(player[0], 12), 628)
-        player[1] = min(max(player[1], 12), 468)
+        player.update()
+        ball.update()
 
-        // if player touches the ball, deflect it
-        var pd = distance(player[0], player[1], ball[0], ball[1])
+        // deflect ball if player touches it
+        var pd = distance(player.x, player.y, ball.x, ball.y)
         if pd < 36 {
-            vel[0] = 0 - vel[0]
-            vel[1] = 0 - vel[1]
+            ball.vx = 0 - ball.vx
+            ball.vy = 0 - ball.vy
         }
 
         // escape to quit
         if keyPressed("escape") { stop }
 
-        // bouncing ball
-        ball[0] = ball[0] + vel[0] * deltaTime
-        ball[1] = ball[1] + vel[1] * deltaTime
-        if ball[0] > 620 { vel[0] = 0 - abs(vel[0]) }
-        if ball[0] < 20 { vel[0] = abs(vel[0]) }
-        if ball[1] > 460 { vel[1] = 0 - abs(vel[1]) }
-        if ball[1] < 20 { vel[1] = abs(vel[1]) }
-
         // ball color based on distance from center
-        var d = distance(ball[0], ball[1], 320, 240)
+        var d = distance(ball.x, ball.y, 320, 240)
         var cr = lerp(255, 60, min(d, 260) / 260)
         var cg = lerp(60, 220, (sin(t * 1.5) + 1) * 0.5)
         var cb = lerp(120, 255, (cos(t) + 1) * 0.5)
-        drawCircle(ball[0], ball[1], 24, cr, cg, cb)
+        drawCircle(ball.x, ball.y, 24, cr, cg, cb)
 
         // rotating square on orbit
-        var square = [320 + cos(t * 0.8) * 190, 240 + sin(t * 0.8) * 140]
+        var sqx = 320 + cos(t * 0.8) * 190
+        var sqy = 240 + sin(t * 0.8) * 140
         var sc = mod(t * 60, 200) + 55
-        drawSquare(square[0] - 12, square[1] - 12, 24, sc, 180, 255 - sc)
+        drawSquare(sqx - 12, sqy - 12, 24, sc, 180, 255 - sc)
 
         // player square
-        drawSquare(player[0] - 12, player[1] - 12, 24, 220, 220, 220)
+        drawSquare(player.x - 12, player.y - 12, 24, 220, 220, 220)
 
-        // midpoint marker between ball and square
-        var mid = [lerp(ball[0], square[0], 0.5), lerp(ball[1], square[1], 0.5)]
-        drawCircle(mid[0], mid[1], 7, 255, 240, 80)
+        // midpoint marker between ball and orbiting square
+        var midx = lerp(ball.x, sqx, 0.5)
+        var midy = lerp(ball.y, sqy, 0.5)
+        drawCircle(midx, midy, 7, 255, 240, 80)
 
-        // sine wave across the top of the window
+        // sine wave across the top
         var px = 640
         rep px {
             var py = 30 + sin(px * 0.04 + t * 3) * 18
             drawPixel(px, py, 80, 200, 255)
         }
 
-        // draw score text
         drawText(20, 20, "Hello", 20, 255, 255, 255)
         drawText(520, 20, "Kinnie", 18, 255, 200, 100)
 

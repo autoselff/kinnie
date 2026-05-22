@@ -588,6 +588,7 @@ static size_t parse_call_args(Token tokens[], size_t i, char bufs[][ARG_BUF_LEN]
                     case TOK_MUL: part = " * "; break;
                     case TOK_DIV: part = " / "; break;
                     case TOK_MOD: part = " % "; break;
+                    case TOK_DOT: part = "."; break;
                     case TOK_LSQUARE: part = "[(int)("; break;
                     case TOK_RSQUARE: part = ")]"; break;
                     default: break;
