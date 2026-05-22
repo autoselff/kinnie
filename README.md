@@ -214,6 +214,10 @@ var div = 20 / 4
 | `pow(a, b)` | a raised to the power b |
 | `min(a, b)` | smaller of two values |
 | `max(a, b)` | larger of two values |
+| `clamp(x, min, max)` | clamp value between min and max |
+| `round(x)` | round to nearest integer |
+| `floor(x)` | round down to nearest integer |
+| `ceil(x)` | round up to nearest integer |
 | `mod(a, b)` | floating-point modulo |
 | `lerp(a, b, t)` | linear interpolation: `a + (b-a) * t` |
 | `distance(x1, y1, x2, y2)` | Euclidean distance between two points |
@@ -221,14 +225,18 @@ var div = 20 / 4
 
 ```kinnie
 var angle = 1.57
-var s = sin(angle)       // ~1.0
-var c = cos(angle)       // ~0.0
-var v = abs(-5)          // 5
-var lo = min(3, 7)       // 3
-var hi = max(3, 7)       // 7
-var r = mod(10.5, 3)     // 1.5
-var m = lerp(0, 100, 0.25)       // 25
-var d = distance(0, 0, 3, 4)     // 5
+var s = sin(angle)              // ~1.0
+var c = cos(angle)              // ~0.0
+var v = abs(-5)                 // 5
+var lo = min(3, 7)              // 3
+var hi = max(3, 7)              // 7
+var clamped = clamp(5, 0, 3)    // 3
+var rounded = round(3.7)        // 4.0
+var floored = floor(3.7)        // 3.0
+var ceiled = ceil(3.2)          // 4.0
+var r = mod(10.5, 3)            // 1.5
+var m = lerp(0, 100, 0.25)      // 25
+var d = distance(0, 0, 3, 4)    // 5
 ```
 
 ### Comparison Operators

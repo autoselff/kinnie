@@ -32,8 +32,12 @@ static const char *map_builtin(const char *name) {
     if (!strcmp(name, "sqrt"))      return "std::sqrt";
     if (!strcmp(name, "min"))       return "std::min<double>";
     if (!strcmp(name, "max"))       return "std::max<double>";
+    if (!strcmp(name, "round"))     return "std::round";
+    if (!strcmp(name, "floor"))     return "std::floor";
+    if (!strcmp(name, "ceil"))      return "std::ceil";
     if (!strcmp(name, "lerp"))      return "_lerp";
     if (!strcmp(name, "distance"))  return "_distance";
+    if (!strcmp(name, "clamp"))     return "_clamp";
     if (!strcmp(name, "mod"))       return "std::fmod";
     if (!strcmp(name, "random"))    return "_random";
     if (!strcmp(name, "sizeof"))    return "sizeof";
@@ -975,6 +979,11 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "double _lerp(double a, double b, double t) { return a + (b - a) * t; }\n"
         "double _distance(double x1, double y1, double x2, double y2) {\n"
         "    return std::sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));\n"
+        "}\n"
+        "double _clamp(double x, double min, double max) {\n"
+        "    if (x < min) return min;\n"
+        "    if (x > max) return max;\n"
+        "    return x;\n"
         "}\n"
         "double len(_KnTable& table) {\n"
         "    return table.size();\n"
