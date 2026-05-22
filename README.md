@@ -242,8 +242,10 @@ delay(0.5)                      // pause for 0.5 seconds
 ### Other Functions
 | Function | Description |
 |---|---|
+| 'random(min, max)' | returns a random number between min and max |
 | `sizeof(x)` | size in bytes of a value |
 | `delay(seconds)` | pause execution for specified seconds |
+
 
 ### Comparison Operators
 
@@ -520,11 +522,6 @@ Draws text using system fonts. Requires SDL2_ttf library.
 ```kinnie
 drawText(50, 50, "Hello World", 24, 255, 255, 255)  // white text at (50,50), size 24
 ```
-
-### Random Functions
-
-#### `random(min, max)` → number
-
 
 ## Keyboard Input
 
