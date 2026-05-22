@@ -43,6 +43,7 @@ kinnie
 *.hex
 
 # Debug files
+compile_commands.json
 *.dSYM/
 *.su
 *.idb
