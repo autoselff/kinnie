@@ -221,7 +221,6 @@ var div = 20 / 4
 | `mod(a, b)` | floating-point modulo |
 | `lerp(a, b, t)` | linear interpolation: `a + (b-a) * t` |
 | `distance(x1, y1, x2, y2)` | Euclidean distance between two points |
-| `sizeof(x)` | size in bytes of a value |
 
 ```kinnie
 var angle = 1.57
@@ -237,7 +236,14 @@ var ceiled = ceil(3.2)          // 4.0
 var r = mod(10.5, 3)            // 1.5
 var m = lerp(0, 100, 0.25)      // 25
 var d = distance(0, 0, 3, 4)    // 5
+delay(0.5)                      // pause for 0.5 seconds
 ```
+
+### Other Functions
+| Function | Description |
+|---|---|
+| `sizeof(x)` | size in bytes of a value |
+| `delay(seconds)` | pause execution for specified seconds |
 
 ### Comparison Operators
 
@@ -401,6 +407,50 @@ fun main() {
 }
 ```
 
+```kinnie
+str Objects {
+    var objects = [1, 2, 3]
+
+    fun show() {
+        var l = len(objects)
+        var i = 0
+        rep l {
+            out "{objects[i]}\n"
+            i = i + 1
+        }
+    }
+
+    fun multiply() {
+        var l = len(objects)
+        var i = 0
+        rep l {
+            objects[i] = objects[i] * 10
+            i = i + 1
+        }
+    }
+}
+
+fun addd(a, b, c, d) {
+    ret a + b + c + d
+}
+
+fun show(x) {
+    out "{x}\n"
+}
+
+fun main() {
+    str Objects objs
+    objs.show()
+    objs.multiply()
+    objs.show()
+
+    out "{addd(1, 2, 3, 6546456456456)}\n"
+    show("Hello, World!")
+    show(34534)
+
+}
+```
+
 The compiler detects struct parameters automatically by looking for dot-notation usage inside the function body.
 
 Limits: maximum 32 structs, 32 fields per struct, 16 methods per struct.
@@ -416,7 +466,7 @@ add "lib.kn"
 ### Window Initialization
 
 ```kinnie
-createWindow(800, 600, "My Game")
+createWindow(800, 600, "Kinnie")
 ```
 
 Parameters: `(width, height, title)`
@@ -424,7 +474,19 @@ Parameters: `(width, height, title)`
 ### Clear Screen
 
 ```kinnie
-clearScreen(r, g, b)
+fun main() {
+    createWindow(800, 600, "Kinnie")
+    setFont("/usr/share/fonts/Adwaita/AdwaitaMono-Regular.ttf")
+
+    var i = 0
+    rep 1 {
+        clearScreen(0, 0, 0
+        drawText(180, 270, "{i}", 50, 255, 0, 0)
+        i = i + 1
+        delay(0.5)
+    }
+}
+
 ```
 
 Parameters: RGB values (0-255)

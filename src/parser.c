@@ -123,19 +123,44 @@ void parse_structs(Token tokens[], size_t token_count) {
                 snprintf(c->field_names[c->field_count], MAX_NAME_LEN, "%s", tokens[j].text);
                 j++;
                 if (tokens[j].type == TOK_ASSIGN) j++;
-                if (tokens[j].type == TOK_STRING) {
+                if (tokens[j].type == TOK_LSQUARE) {
+                    c->field_is_array[c->field_count] = 1;
+                    c->field_is_string[c->field_count] = 0;
+                    char arr_init[MAX_STRING_LEN] = "_KnTable{";
+                    int arr_len = strlen(arr_init);
+                    int first = 1;
+                    j++;
+                    while (j < end && tokens[j].type != TOK_RSQUARE) {
+                        if (tokens[j].type == TOK_NUMBER) {
+                            if (!first) arr_len += snprintf(arr_init + arr_len, MAX_STRING_LEN - arr_len, ", ");
+                            arr_len += snprintf(arr_init + arr_len, MAX_STRING_LEN - arr_len, "_KnVal(%s)", tokens[j].text);
+                            first = 0;
+                        } else if (tokens[j].type == TOK_COMMA) {
+                            // skip commas
+                        }
+                        j++;
+                    }
+                    snprintf(arr_init + arr_len, MAX_STRING_LEN - arr_len, "}");
+                    snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "%s", arr_init);
+                    if (j < end && tokens[j].type == TOK_RSQUARE) j++;
+                } else if (tokens[j].type == TOK_STRING) {
                     c->field_is_string[c->field_count] = 1;
+                    c->field_is_array[c->field_count] = 0;
                     snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "\"%s\"", tokens[j].text);
                     j++;
                 } else if (tokens[j].type == TOK_NUMBER) {
                     c->field_is_string[c->field_count] = 0;
+                    c->field_is_array[c->field_count] = 0;
                     snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "%s", tokens[j].text);
                     j++;
                 } else if (tokens[j].type == TOK_MINUS && tokens[j + 1].type == TOK_NUMBER) {
                     c->field_is_string[c->field_count] = 0;
+                    c->field_is_array[c->field_count] = 0;
                     snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "-%s", tokens[j + 1].text);
                     j += 2;
                 } else {
+                    c->field_is_string[c->field_count] = 0;
+                    c->field_is_array[c->field_count] = 0;
                     snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "0");
                 }
                 c->field_count++;

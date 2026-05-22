@@ -41,7 +41,7 @@ static const char *map_builtin(const char *name) {
     if (!strcmp(name, "mod"))       return "std::fmod";
     if (!strcmp(name, "random"))    return "_random";
     if (!strcmp(name, "sizeof"))    return "sizeof";
-    if (!strcmp(name, "makeMatrix")) return "_makeMatrix";
+    if (!strcmp(name, "delay"))     return "_delay";
     return NULL;
 }
 
@@ -73,6 +73,44 @@ static size_t emit_value(Token tokens[], size_t i, FILE *out) {
 
     if (tokens[i].type == TOK_NUMBER) {
         fputs(tokens[i].text, out);
+        return i + 1;
+    }
+
+    if (tokens[i].type == TOK_STRING) {
+        const char *str = tokens[i].text;
+        int has_interp = 0;
+        for (size_t si = 0; str[si]; si++) {
+            if (str[si] == '{') { has_interp = 1; break; }
+        }
+
+        if (has_interp) {
+            fputs("_KnVal((std::ostringstream() << std::fixed << std::setprecision(1)", out);
+            size_t j = 0;
+            while (str[j] != '\0') {
+                if (str[j] == '{') {
+                    j++;
+                    char vname[MAX_NAME_LEN];
+                    size_t vi = 0;
+                    while (str[j] != '}' && str[j] != '\0' && vi + 1 < MAX_NAME_LEN)
+                        vname[vi++] = str[j++];
+                    vname[vi] = '\0';
+                    if (str[j] == '}') j++;
+                    fprintf(out, " << %s", vname);
+                } else {
+                    fputc('"', out);
+                    while (str[j] != '\0' && str[j] != '{') {
+                        if (str[j] == '"') fputs("\\\"", out);
+                        else fputc(str[j], out);
+                        j++;
+                    }
+                    fputc('"', out);
+                    fputs(" << ", out);
+                }
+            }
+            fputs(").str().c_str())", out);
+        } else {
+            fprintf(out, "_KnVal(\"%s\")", str);
+        }
         return i + 1;
     }
 
@@ -204,7 +242,39 @@ static size_t parse_call_args(Token tokens[], size_t i, char bufs[][ARG_BUF_LEN]
         size_t bi = 0;
 
         if (tokens[i].type == TOK_STRING) {
-            bi += snprintf(buf + bi, ARG_BUF_LEN - bi, "\"%s\"", tokens[i].text);
+            const char *str = tokens[i].text;
+            int has_interp = 0;
+            for (size_t si = 0; str[si]; si++) {
+                if (str[si] == '{') { has_interp = 1; break; }
+            }
+
+            if (has_interp) {
+                bi += snprintf(buf + bi, ARG_BUF_LEN - bi, "(std::ostringstream() << std::fixed << std::setprecision(1)");
+                size_t j = 0;
+                while (str[j] != '\0') {
+                    if (str[j] == '{') {
+                        j++;
+                        char vname[MAX_NAME_LEN];
+                        size_t vi = 0;
+                        while (str[j] != '}' && str[j] != '\0' && vi + 1 < MAX_NAME_LEN)
+                            vname[vi++] = str[j++];
+                        vname[vi] = '\0';
+                        if (str[j] == '}') j++;
+                        bi += snprintf(buf + bi, ARG_BUF_LEN - bi, " << %s", vname);
+                    } else {
+                        bi += snprintf(buf + bi, ARG_BUF_LEN - bi, " << \"");
+                        while (str[j] != '\0' && str[j] != '{') {
+                            if (str[j] == '"') bi += snprintf(buf + bi, ARG_BUF_LEN - bi, "\\\"");
+                            else bi += snprintf(buf + bi, ARG_BUF_LEN - bi, "%c", str[j]);
+                            j++;
+                        }
+                        bi += snprintf(buf + bi, ARG_BUF_LEN - bi, "\"");
+                    }
+                }
+                bi += snprintf(buf + bi, ARG_BUF_LEN - bi, ").str().c_str()");
+            } else {
+                bi += snprintf(buf + bi, ARG_BUF_LEN - bi, "\"%s\"", str);
+            }
             i++;
         } else {
             while (tokens[i].type != TOK_COMMA && tokens[i].type != TOK_RBRACKET
@@ -343,7 +413,7 @@ static void emit_func_signature(FILE *out, Function *f) {
         } else {
             const char *ct = param_struct_type(f->param_names[pi], f->tokens, f->token_count);
             if (ct) fprintf(out, "%s& %s", ct, f->param_names[pi]);
-            else    fprintf(out, "double %s", f->param_names[pi]);
+            else    fprintf(out, "_KnVal %s", f->param_names[pi]);
         }
     }
     fputc(')', out);
@@ -471,15 +541,6 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             strcpy(name, tokens[i + 1].text);
             i += 3;
             write_indent(out, indent);
-
-            if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET
-                    && strcmp(tokens[i].text, "makeMatrix") == 0) {
-                i += 2;
-                fprintf(out, "_KnTable2D %s = _makeMatrix(", name);
-                i = emit_call_args_inline(tokens, i, out);
-                fputs(";\n", out);
-                continue;
-            }
 
             if (tokens[i].type == TOK_LSQUARE) {
                 i++;
@@ -921,7 +982,9 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "#include <random>\n"
         "#include <iomanip>\n"
         "#include <cmath>\n"
-        "#include <variant>\n",
+        "#include <variant>\n"
+        "#include <thread>\n"
+        "#include <chrono>\n",
         out);
 #if HAVE_SDL
     fputs("#include <SDL2/SDL.h>\n", out);
@@ -984,6 +1047,9 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "    if (x < min) return min;\n"
         "    if (x > max) return max;\n"
         "    return x;\n"
+        "}\n"
+        "void _delay(double seconds) {\n"
+        "    std::this_thread::sleep_for(std::chrono::milliseconds((int)(seconds * 1000)));\n"
         "}\n"
         "double len(_KnTable& table) {\n"
         "    return table.size();\n"
@@ -1056,7 +1122,9 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         Struct *c = &structs[ci];
         fprintf(out, "struct %s {\n", c->name);
         for (size_t fi2 = 0; fi2 < c->field_count; fi2++) {
-            if (c->field_is_string[fi2])
+            if (c->field_is_array[fi2])
+                fprintf(out, "    _KnTable %s = %s;\n", c->field_names[fi2], c->field_defaults[fi2]);
+            else if (c->field_is_string[fi2])
                 fprintf(out, "    std::string %s = %s;\n", c->field_names[fi2], c->field_defaults[fi2]);
             else
                 fprintf(out, "    double %s = %s;\n", c->field_names[fi2], c->field_defaults[fi2]);
@@ -1075,7 +1143,7 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
                 else {
                     const char *ct = param_struct_type(m->param_names[pi], m->tokens, m->token_count);
                     if (ct) fprintf(out, "%s& %s", ct, m->param_names[pi]);
-                    else    fprintf(out, "double %s", m->param_names[pi]);
+                    else    fprintf(out, "_KnVal %s", m->param_names[pi]);
                 }
             }
             fputs(") {\n", out);
