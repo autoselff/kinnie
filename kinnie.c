@@ -310,7 +310,7 @@ void parse_functions(Token tokens[], size_t token_count) {
         }
 
         Function *f = &functions[function_count];
-        strncpy(f->name, tokens[i].text, MAX_NAME_LEN - 1);
+        snprintf(f->name, MAX_NAME_LEN, "%s", tokens[i].text);
         f->param_count = 0;
         i++;
 
@@ -321,7 +321,7 @@ void parse_functions(Token tokens[], size_t token_count) {
                     fprintf(stderr, "Expected parameter name\n");
                     exit(1);
                 }
-                strncpy(f->param_names[f->param_count++], tokens[i].text, MAX_NAME_LEN - 1);
+                snprintf(f->param_names[f->param_count++], MAX_NAME_LEN, "%s", tokens[i].text);
                 i++;
                 if (tokens[i].type == TOK_COMMA) i++;
             }
@@ -362,7 +362,7 @@ static void parse_structs(Token tokens[], size_t token_count) {
         if (tokens[i + 1].type != TOK_LBRACE) { i++; continue; }
         if (struct_count >= MAX_STRUCTS) break;
         Struct *c = &structs[struct_count];
-        strncpy(c->name, tokens[i].text, MAX_NAME_LEN - 1);
+        snprintf(c->name, MAX_NAME_LEN, "%s", tokens[i].text);
         c->field_count = 0;
         c->method_count = 0;
         i += 2;
@@ -372,7 +372,7 @@ static void parse_structs(Token tokens[], size_t token_count) {
             if (tokens[j].type == TOK_VAR && j + 1 < end && tokens[j + 1].type == TOK_IDENT) {
                 j++;
                 if (c->field_count >= MAX_STRUCT_FIELDS) { j++; continue; }
-                strncpy(c->field_names[c->field_count], tokens[j].text, MAX_NAME_LEN - 1);
+                snprintf(c->field_names[c->field_count], MAX_NAME_LEN, "%s", tokens[j].text);
                 j++;
                 if (tokens[j].type == TOK_ASSIGN) j++;
                 if (tokens[j].type == TOK_STRING) {
@@ -381,14 +381,14 @@ static void parse_structs(Token tokens[], size_t token_count) {
                     j++;
                 } else if (tokens[j].type == TOK_NUMBER) {
                     c->field_is_string[c->field_count] = 0;
-                    strncpy(c->field_defaults[c->field_count], tokens[j].text, MAX_STRING_LEN - 1);
+                    snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "%s", tokens[j].text);
                     j++;
                 } else if (tokens[j].type == TOK_MINUS && tokens[j + 1].type == TOK_NUMBER) {
                     c->field_is_string[c->field_count] = 0;
                     snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "-%s", tokens[j + 1].text);
                     j += 2;
                 } else {
-                    strcpy(c->field_defaults[c->field_count], "0");
+                    snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "0");
                 }
                 c->field_count++;
                 continue;
