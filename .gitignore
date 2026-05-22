@@ -1,3 +1,6 @@
+# Build directory
+build/
+
 # Interpreter
 kinnie
 
@@ -45,6 +48,7 @@ kinnie
 *.idb
 *.pdb
 *.cpp
+*.kn
 
 # Kernel Module Compile Results
 *.mod*
