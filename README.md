@@ -242,7 +242,7 @@ delay(0.5)                      // pause for 0.5 seconds
 ### Other Functions
 | Function | Description |
 |---|---|
-| 'random(min, max)' | returns a random number between min and max |
+| `random(min, max)` | returns a random number between min and max |
 | `sizeof(x)` | size in bytes of a value |
 | `delay(seconds)` | pause execution for specified seconds |
 
