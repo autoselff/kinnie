@@ -49,7 +49,6 @@ compile_commands.json
 *.idb
 *.pdb
 *.cpp
-*.kn
 
 # Kernel Module Compile Results
 *.mod*

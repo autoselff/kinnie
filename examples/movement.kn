@@ -1,0 +1,40 @@
+str Player {
+    var position = [400, 300]
+    var color = [255, 120, 0]
+    var size = 60
+    var speed = 300
+
+    fun draw() {
+        drawSquare(position[0], position[1], size, color[0], color[1], color[2])
+    }
+
+    fun move() {
+        if keyDown("right") {
+            position[0] = position[0] + speed * deltaTime
+        }
+        if keyDown("left") {
+            position[0] = position[0] - speed * deltaTime
+        }
+        if keyDown("up") {
+            position[1] = position[1] - speed * deltaTime
+        }
+        if keyDown("down") {
+            position[1] = position[1] + speed * deltaTime
+        }
+    }
+}
+
+
+fun main() {
+    createWindow(800, 600, "Kinnie Simulator")
+    setFont("/usr/share/fonts/Adwaita/AdwaitaMono-Regular.ttf")
+    Player player
+
+    var i = 0
+    rep 1 {
+        clearScreen(0, 0, 0)
+        player.draw()
+        player.draw()
+        player.move()
+    }
+}

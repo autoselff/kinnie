@@ -379,6 +379,11 @@ str Player {
 
 Creating an instance:
 ```kinnie
+Player p        // str keyword is optional
+```
+
+Or with `str` keyword (equivalent):
+```kinnie
 str Player p
 ```
 
@@ -402,7 +407,7 @@ fun damage(p, amount) {
 }
 
 fun main() {
-    str Player p
+    Player p
     p.hp = 100
     damage(p, 25)
     out "{p.hp}\n"   // 75
@@ -441,7 +446,7 @@ fun show(x) {
 }
 
 fun main() {
-    str Objects objs
+    Objects objs
     objs.show()
     objs.multiply()
     objs.show()
@@ -454,6 +459,8 @@ fun main() {
 ```
 
 The compiler detects struct parameters automatically by looking for dot-notation usage inside the function body.
+
+**Note:** The `str` keyword is optional when creating struct instances. `Player p` and `str Player p` are equivalent.
 
 Limits: maximum 32 structs, 32 fields per struct, 16 methods per struct.
 

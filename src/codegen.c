@@ -536,6 +536,22 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             continue;
         }
 
+        if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_IDENT) {
+            int is_struct = 0;
+            for (size_t si = 0; si < struct_count; si++) {
+                if (strcmp(tokens[i].text, structs[si].name) == 0) {
+                    is_struct = 1;
+                    break;
+                }
+            }
+            if (is_struct) {
+                write_indent(out, indent);
+                fprintf(out, "%s %s;\n", tokens[i].text, tokens[i + 1].text);
+                i += 2;
+                continue;
+            }
+        }
+
         if (tokens[i].type == TOK_VAR) {
             char name[MAX_NAME_LEN];
             strcpy(name, tokens[i + 1].text);
@@ -1005,6 +1021,7 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "    \n"
         "    _KnVal() : _type(NUMBER), _n(0) {}\n"
         "    _KnVal(double v) : _type(NUMBER), _n(v) {}\n"
+        "    _KnVal(int v) : _type(NUMBER), _n(v) {}\n"
         "    _KnVal(const char* v) : _type(STRING), _n(0), _t(v) {}\n"
         "    _KnVal(const std::string& v) : _type(STRING), _n(0), _t(v) {}\n"
         "    _KnVal(const std::vector<_KnVal>& v) : _type(ARRAY), _n(0), _a(v) {}\n"
@@ -1024,16 +1041,7 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "    }\n"
         "};\n"
         "using _KnTable = std::vector<_KnVal>;\n"
-        "using _KnTable2D = _KnTable;\n"
-        "_KnTable _makeMatrix(double rows, double cols) {\n"
-        "    _KnTable result;\n"
-        "    for (int i = 0; i < (int)rows; i++) {\n"
-        "        _KnTable row;\n"
-        "        for (int j = 0; j < (int)cols; j++) row.push_back(_KnVal(0.0));\n"
-        "        result.push_back(_KnVal(row));\n"
-        "    }\n"
-        "    return result;\n"
-        "}\n\n"
+        "using _KnTable2D = _KnTable;\n\n"
         "std::mt19937 _rng(std::random_device{}());\n"
         "double _random(double min, double max) {\n"
         "    std::uniform_real_distribution<double> dist(min, max);\n"
