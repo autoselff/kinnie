@@ -1,7 +1,7 @@
 # Kinnie
 ## Setup
 
-**Important! Remember, to use the built-in graphics library, you must have the SDL and SDL_ttf library installed. Also, make sure you have gcc and g++ compilers installed. Kinnie does not support the underscore character in variable and function names.**
+**Important! Remember, to use the built-in graphics library, you must have the SDL and SDL_ttf library installed. Also, make sure you have gcc and g++ compilers installed. Kinnie does not support the underscore character in variable, function and struct names.**
 
 Debian
 ```bash
