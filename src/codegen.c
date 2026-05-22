@@ -80,7 +80,15 @@ static size_t emit_value(Token tokens[], size_t i, FILE *out) {
                 i += 2;
                 i = emit_expression(tokens, i, out);
                 if (tokens[i].type == TOK_RSQUARE) i++;
-                fputs(")].size()", out);
+                fputs(")]", out);
+                while (tokens[i].type == TOK_LSQUARE) {
+                    fputs("._a[(int)(", out);
+                    i++;
+                    i = emit_expression(tokens, i, out);
+                    if (tokens[i].type == TOK_RSQUARE) i++;
+                    fputs(")]", out);
+                }
+                fputs(".size()", out);
             } else {
                 fprintf(out, "%s.size()", tokens[i].text);
                 i++;
@@ -122,8 +130,8 @@ static size_t emit_value(Token tokens[], size_t i, FILE *out) {
             i = emit_expression(tokens, i, out);
             if (tokens[i].type == TOK_RSQUARE) i++;
             fputs(")]", out);
-            if (tokens[i].type == TOK_LSQUARE) {
-                fputs("[(int)(", out);
+            while (tokens[i].type == TOK_LSQUARE) {
+                fputs("._a[(int)(", out);
                 i++;
                 i = emit_expression(tokens, i, out);
                 if (tokens[i].type == TOK_RSQUARE) i++;
@@ -292,22 +300,9 @@ static int param_is_array(const char *param_name, Token tokens[], size_t token_c
 }
 
 static int param_is_2d_array(const char *param_name, Token tokens[], size_t token_count) {
-    for (size_t i = 0; i + 1 < token_count; i++) {
-        if (tokens[i].type == TOK_IDENT && strcmp(tokens[i].text, param_name) == 0
-                && tokens[i + 1].type == TOK_LSQUARE) {
-            size_t j = i + 2;
-            while (j < token_count && tokens[j].type != TOK_RSQUARE && tokens[j].type != TOK_EOF) j++;
-            if (j + 1 < token_count && tokens[j + 1].type == TOK_LSQUARE) return 1;
-        }
-        if (tokens[i].type == TOK_IDENT && strcmp(tokens[i].text, "len") == 0
-                && i + 3 < token_count
-                && tokens[i + 1].type == TOK_LBRACKET
-                && tokens[i + 2].type == TOK_IDENT
-                && strcmp(tokens[i + 2].text, param_name) == 0
-                && tokens[i + 3].type == TOK_LSQUARE) {
-            return 1;
-        }
-    }
+    (void)param_name;
+    (void)tokens;
+    (void)token_count;
     return 0;
 }
 
@@ -485,52 +480,86 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             if (tokens[i].type == TOK_LSQUARE) {
                 i++;
                 if (tokens[i].type == TOK_LSQUARE) {
-                    fprintf(out, "_KnTable2D %s = {", name);
-                    int first_row = 1;
+                    fprintf(out, "_KnTable %s;\n", name);
+                    write_indent(out, indent);
+                    fprintf(out, "{ _KnTable _tmp_%s;\n", name);
                     while (tokens[i].type != TOK_RSQUARE && tokens[i].type != TOK_EOF) {
                         if (tokens[i].type == TOK_LSQUARE) {
-                            if (!first_row) fputs(", ", out);
-                            first_row = 0;
-                            fputs("{", out);
+                            write_indent(out, indent + 1);
+                            fputs("{ _KnTable _row;\n", out);
                             i++;
-                            int first_col = 1;
                             while (tokens[i].type != TOK_RSQUARE && tokens[i].type != TOK_EOF) {
-                                if (!first_col) fputs(", ", out);
-                                first_col = 0;
-                                if (tokens[i].type == TOK_STRING) {
-                                    fprintf(out, "\"%s\"", tokens[i].text);
+                                if (tokens[i].type == TOK_LSQUARE) {
+                                    write_indent(out, indent + 2);
+                                    fputs("{ _KnTable _inner;\n", out);
                                     i++;
+                                    while (tokens[i].type != TOK_RSQUARE && tokens[i].type != TOK_EOF) {
+                                        write_indent(out, indent + 2);
+                                        fputs("_inner.push_back(_KnVal(", out);
+                                        if (tokens[i].type == TOK_STRING) {
+                                            fprintf(out, "\"%s\"", tokens[i].text);
+                                            i++;
+                                        } else {
+                                            i = emit_expression(tokens, i, out);
+                                        }
+                                        fputs("));\n", out);
+                                        if (tokens[i].type == TOK_COMMA) i++;
+                                    }
+                                    if (tokens[i].type == TOK_RSQUARE) i++;
+                                    write_indent(out, indent + 2);
+                                    fputs("_row.push_back(_KnVal(_inner));\n", out);
+                                    write_indent(out, indent + 2);
+                                    fputs("}\n", out);
                                 } else {
-                                    i = emit_expression(tokens, i, out);
+                                    write_indent(out, indent + 2);
+                                    fputs("_row.push_back(_KnVal(", out);
+                                    if (tokens[i].type == TOK_STRING) {
+                                        fprintf(out, "\"%s\"", tokens[i].text);
+                                        i++;
+                                    } else {
+                                        i = emit_expression(tokens, i, out);
+                                    }
+                                    fputs("));\n", out);
                                 }
                                 if (tokens[i].type == TOK_COMMA) i++;
                             }
                             if (tokens[i].type == TOK_RSQUARE) i++;
-                            fputs("}", out);
+                            write_indent(out, indent + 1);
+                            fprintf(out, "_tmp_%s.push_back(_KnVal(_row));\n", name);
+                            write_indent(out, indent + 1);
+                            fputs("}\n", out);
                         } else {
                             i++;
                         }
                         if (tokens[i].type == TOK_COMMA) i++;
                     }
                     if (tokens[i].type == TOK_RSQUARE) i++;
-                    fputs("};\n", out);
+                    write_indent(out, indent + 1);
+                    fprintf(out, "%s = _tmp_%s;\n", name, name);
+                    write_indent(out, indent);
+                    fputs("}\n", out);
                     continue;
                 }
-                fprintf(out, "_KnTable %s = {", name);
-                int first = 1;
+                fprintf(out, "_KnTable %s;\n", name);
+                write_indent(out, indent);
+                fprintf(out, "{ _KnTable _tmp_%s;\n", name);
                 while (tokens[i].type != TOK_RSQUARE && tokens[i].type != TOK_EOF) {
-                    if (!first) fputs(", ", out);
-                    first = 0;
+                    write_indent(out, indent + 1);
+                    fprintf(out, "_tmp_%s.push_back(_KnVal(", name);
                     if (tokens[i].type == TOK_STRING) {
                         fprintf(out, "\"%s\"", tokens[i].text);
                         i++;
                     } else {
                         i = emit_expression(tokens, i, out);
                     }
+                    fputs("));\n", out);
                     if (tokens[i].type == TOK_COMMA) i++;
                 }
                 if (tokens[i].type == TOK_RSQUARE) i++;
-                fputs("};\n", out);
+                write_indent(out, indent + 1);
+                fprintf(out, "%s = _tmp_%s;\n", name, name);
+                write_indent(out, indent);
+                fputs("}\n", out);
                 continue;
             }
 
@@ -544,7 +573,15 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
                     fprintf(out, "double %s = %s[(int)(", name, arrname);
                     i = emit_expression(tokens, i, out);
                     if (tokens[i].type == TOK_RSQUARE) i++;
-                    fputs(")].size();\n", out);
+                    fputs(")]", out);
+                    while (tokens[i].type == TOK_LSQUARE) {
+                        fputs("._a[(int)(", out);
+                        i++;
+                        i = emit_expression(tokens, i, out);
+                        if (tokens[i].type == TOK_RSQUARE) i++;
+                        fputs(")]", out);
+                    }
+                    fputs(".size();\n", out);
                 } else {
                     fprintf(out, "double %s = %s.size()", name, tokens[i].text);
                     i++;
@@ -591,21 +628,21 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             fprintf(out, "%s[(int)(", name);
             i = emit_expression(tokens, i, out);
             if (tokens[i].type == TOK_RSQUARE) i++;
-            if (tokens[i].type == TOK_LSQUARE) {
-                fputs(")][(int)(", out);
+            while (tokens[i].type == TOK_LSQUARE) {
+                fputs(")]._a[(int)(", out);
                 i++;
                 i = emit_expression(tokens, i, out);
                 if (tokens[i].type == TOK_RSQUARE) i++;
             }
             if (tokens[i].type == TOK_ASSIGN) i++;
-            fputs(")] = ", out);
+            fputs(")] = _KnVal(", out);
             if (tokens[i].type == TOK_STRING) {
                 fprintf(out, "\"%s\"", tokens[i].text);
                 i++;
             } else {
                 i = emit_expression(tokens, i, out);
             }
-            fputs(";\n", out);
+            fputs(");\n", out);
             continue;
         }
 
@@ -879,7 +916,8 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "#include <vector>\n"
         "#include <random>\n"
         "#include <iomanip>\n"
-        "#include <cmath>\n",
+        "#include <cmath>\n"
+        "#include <variant>\n",
         out);
 #if HAVE_SDL
     fputs("#include <SDL2/SDL.h>\n", out);
@@ -890,22 +928,44 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
 
     fputs(
         "\n"
-        "struct _KnVal {\n"
-        "    bool _s; double _n; std::string _t;\n"
-        "    _KnVal(double v):_s(false),_n(v){}\n"
-        "    _KnVal(const char* v):_s(true),_n(0),_t(v){}\n"
-        "    _KnVal(const std::string& v):_s(true),_n(0),_t(v){}\n"
+        "class _KnVal {\n"
+        "public:\n"
+        "    enum Type { NUMBER, STRING, ARRAY };\n"
+        "    Type _type;\n"
+        "    double _n;\n"
+        "    std::string _t;\n"
+        "    std::vector<_KnVal> _a;\n"
+        "    \n"
+        "    _KnVal() : _type(NUMBER), _n(0) {}\n"
+        "    _KnVal(double v) : _type(NUMBER), _n(v) {}\n"
+        "    _KnVal(const char* v) : _type(STRING), _n(0), _t(v) {}\n"
+        "    _KnVal(const std::string& v) : _type(STRING), _n(0), _t(v) {}\n"
+        "    _KnVal(const std::vector<_KnVal>& v) : _type(ARRAY), _n(0), _a(v) {}\n"
+        "    \n"
+        "    size_t size() const { if (_type == ARRAY) return _a.size(); return 0; }\n"
+        "    _KnVal operator[](double idx) const { if (_type == ARRAY && (int)idx < (int)_a.size()) return _a[(int)idx]; return _KnVal(); }\n"
+        "    _KnVal& operator[](double idx) { if (_type == ARRAY && (int)idx < (int)_a.size()) return _a[(int)idx]; static _KnVal dummy; return dummy; }\n"
+        "    \n"
         "    operator double() const { return _n; }\n"
         "    operator std::string() const { return _t; }\n"
+        "    operator std::vector<_KnVal>() const { return _a; }\n"
+        "    \n"
         "    friend std::ostream& operator<<(std::ostream& os, const _KnVal& v) {\n"
-        "        if (v._s) return os << v._t;\n"
+        "        if (v._type == STRING) return os << v._t;\n"
+        "        if (v._type == ARRAY) return os << \"[array]\";\n"
         "        return os << v._n;\n"
         "    }\n"
         "};\n"
         "using _KnTable = std::vector<_KnVal>;\n"
-        "using _KnTable2D = std::vector<_KnTable>;\n"
-        "_KnTable2D _makeMatrix(double rows, double cols) {\n"
-        "    return _KnTable2D((size_t)rows, _KnTable((size_t)cols, 0.0));\n"
+        "using _KnTable2D = _KnTable;\n"
+        "_KnTable _makeMatrix(double rows, double cols) {\n"
+        "    _KnTable result;\n"
+        "    for (int i = 0; i < (int)rows; i++) {\n"
+        "        _KnTable row;\n"
+        "        for (int j = 0; j < (int)cols; j++) row.push_back(_KnVal(0.0));\n"
+        "        result.push_back(_KnVal(row));\n"
+        "    }\n"
+        "    return result;\n"
         "}\n\n"
         "std::mt19937 _rng(std::random_device{}());\n"
         "double _random(double min, double max) {\n"

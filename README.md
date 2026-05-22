@@ -61,7 +61,7 @@ var pi = 3.14
 
 ### Arrays
 
-Arrays store multiple values in a single variable. Arrays can contain numbers and strings.
+Arrays store multiple values in a single variable. Arrays can contain numbers, strings, and other arrays.
 
 Creating arrays:
 ```kinnie
@@ -85,13 +85,101 @@ mixed[2] = "new text"
 
 Array in loops:
 ```kinnie
-```kinnie
 var tab = [10, 11, 12, 13, 4235]
 var l = len(tab)
 rep l {
     out "{tab[l]}\n"
 }
 ```
+
+#### Multi-dimensional Arrays
+
+Arrays can be nested arbitrarily to create multi-dimensional structures. All nested arrays use the same `_KnTable` type internally.
+
+**Creating nested arrays:**
+
+1D array:
+```kinnie
+var numbers = [10, 20, 30]
+```
+
+2D array (matrix):
+```kinnie
+var matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+```
+
+3D array:
+```kinnie
+var cube = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]
+```
+
+**Accessing elements:**
+```kinnie
+var val1 = matrix[0][1]      // 2
+var val2 = cube[0][1][0]     // 3
+matrix[1][2] = 99
+cube[0][0][1] = 42
+```
+
+**Getting array dimensions:**
+```kinnie
+var t = [[[1, 2], [3, 4], [5, 6], [7, 8]], [[5, 6], [7, 8]], [[5, 6], [7, 8]]]
+var l = len(t)
+var ll = len(t[0])
+var lll = len(t[0][0])
+
+out "{l}\n"     // 3
+out "{ll}\n"    // 4
+out "{lll}\n"   // 2
+```
+
+**Iterating through multi-dimensional arrays:**
+
+2D iteration:
+```kinnie
+fun display2D(t) {
+    var i = 0
+    var rows = len(t)
+    rep rows {
+        var j = 0
+        var cols = len(t[i])
+        rep cols {
+            out "{t[i][j]} "
+            j = j + 1
+        }
+        out "\n"
+        i = i + 1
+    }
+}
+```
+
+3D iteration:
+```kinnie
+fun process3D(t) {
+    var i = 0
+    var len0 = len(t)
+    rep len0 {
+        var j = 0
+        var len1 = len(t[i])
+        rep len1 {
+            var k = 0
+            var len2 = len(t[i][j])
+            rep len2 {
+                t[i][j][k] = t[i][j][k] * 2
+                k = k + 1
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+}
+```
+
+**Key points:**
+- Nest arrays using bracket notation: `[[], []]` for 2D, `[[[]]]` for 3D, etc.
+- Use `len(array)` to get the size of the first dimension
+- Use `len(array[i])`, `len(array[i][j])`, etc. for nested dimensions
+- Arrays are passed to functions by reference (modifications affect the original)
 
 Practical example with game data:
 ```kinnie
@@ -123,6 +211,7 @@ var div = 20 / 4
 | `sin(x)` | sine of x (radians) |
 | `cos(x)` | cosine of x (radians) |
 | `abs(x)` | absolute value |
+| `sqrt(x)` | square root of x |
 | `exp(x)` | e raised to the power x |
 | `log(x)` | natural logarithm of x |
 | `log10(x)` | base-10 logarithm of x |
@@ -432,3 +521,5 @@ playerX = playerX + speed * deltaTime
 - All numeric values are floating point (`double`)
 - Maximum 32 structs, 32 fields per struct, 16 methods per struct
 - Structs cannot be returned from functions or initialized with `= expr`
+- Arrays can be nested arbitrarily (unlimited dimensions)
+- No built-in array methods like `push()` or `pop()` — use `len()` for size and direct indexing `[]` for access
