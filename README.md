@@ -292,7 +292,7 @@ drawSquare(100, 100, 50, 255, 0, 0)  // red square at (100,100), size 50
 ```
 
 #### `drawCircle(x, y, radius, r, g, b)`
-Draws a circle outline using the midpoint circle algorithm.
+Draws a filled circle using the midpoint circle algorithm.
 ```kinnie
 drawCircle(200, 150, 40, 0, 255, 0)  // green circle at (200,150), radius 40
 ```
