@@ -31,10 +31,6 @@ Add to PATH
 ```bash
 sudo cmake --install build
 ```
-or manually
-```bash
-sudo cp kinnie /usr/local/bin/ && sudo chmod +x /usr/local/bin/kinnie
-```
 
 ## Running
 ```bash
