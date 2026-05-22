@@ -255,6 +255,62 @@ fun main() {
 
 The compiler detects array parameters automatically — no special syntax needed.
 
+### Structs
+
+Defining a struct with fields and methods:
+```kinnie
+str Player {
+    var x = 0
+    var y = 0
+    var hp = 100
+
+    fun move(dx, dy) {
+        x = x + dx
+        y = y + dy
+    }
+
+    fun print() {
+        out "pos: {x}, {y} hp: {hp}\n"
+    }
+}
+```
+
+Creating an instance:
+```kinnie
+str Player p
+```
+
+Accessing and modifying fields:
+```kinnie
+p.x = 400
+p.y = 300
+var health = p.hp
+```
+
+Calling methods:
+```kinnie
+p.move(10, 5)
+p.print()
+```
+
+Passing struct instances to functions (passed by reference — modifications affect the original):
+```kinnie
+fun damage(p, amount) {
+    p.hp = p.hp - amount
+}
+
+fun main() {
+    str Player p
+    p.hp = 100
+    damage(p, 25)
+    out "{p.hp}\n"   // 75
+}
+```
+
+The compiler detects struct parameters automatically by looking for dot-notation usage inside the function body.
+
+Limits: maximum 32 structs, 32 fields per struct, 16 methods per struct.
+
 ### Including Files
 
 ```kinnie
@@ -373,4 +429,5 @@ playerX = playerX + speed * deltaTime
 - Maximum 32 characters in a name
 - Maximum 128 characters in a string literal
 - All numeric values are floating point (`double`)
-- No structs/objects
+- Maximum 32 structs, 32 fields per struct, 16 methods per struct
+- Structs cannot be returned from functions or initialized with `= expr`

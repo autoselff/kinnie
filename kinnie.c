@@ -41,7 +41,7 @@ typedef enum {
     TOK_LOOP_START, TOK_FUN_START, TOK_IF_START, TOK_ELSE, TOK_END,
     TOK_LBRACE, TOK_RBRACE, TOK_LBRACKET, TOK_RBRACKET, TOK_LSQUARE, TOK_RSQUARE,
     TOK_COMMA, TOK_DOT,
-    TOK_RETURN, TOK_KEY_PRESSED, TOK_KEY_DOWN, TOK_ADD, TOK_STOP,
+    TOK_RETURN, TOK_KEY_PRESSED, TOK_KEY_DOWN, TOK_ADD, TOK_STOP, TOK_STRUCT,
     TOK_UNKNOWN
 } TokenType;
 
@@ -58,8 +58,24 @@ typedef struct {
     size_t param_count;
 } Function;
 
+#define MAX_STRUCTS 32
+#define MAX_STRUCT_FIELDS 32
+#define MAX_STRUCT_METHODS 16
+
+typedef struct {
+    char name[MAX_NAME_LEN];
+    char field_names[MAX_STRUCT_FIELDS][MAX_NAME_LEN];
+    char field_defaults[MAX_STRUCT_FIELDS][MAX_STRING_LEN];
+    int field_is_string[MAX_STRUCT_FIELDS];
+    size_t field_count;
+    Function methods[MAX_STRUCT_METHODS];
+    size_t method_count;
+} Struct;
+
 static Function functions[MAX_FUNCTIONS];
 static size_t function_count = 0;
+static Struct structs[MAX_STRUCTS];
+static size_t struct_count = 0;
 static int sdl_window_created = 0;
 
 typedef struct {
@@ -100,6 +116,7 @@ static const struct { const char *kw; TokenType type; } KEYWORDS[] = {
     {"keyDown", TOK_KEY_DOWN},
     {"add", TOK_ADD},
     {"stop", TOK_STOP},
+    {"str", TOK_STRUCT},
 };
 
 static TokenType lookup_keyword(const char *text) {
@@ -275,6 +292,15 @@ void parse_functions(Token tokens[], size_t token_count) {
 
     size_t i = 0;
     while (i < token_count && tokens[i].type != TOK_EOF) {
+        if (tokens[i].type == TOK_STRUCT) {
+            i++;
+            while (i < token_count && tokens[i].type != TOK_LBRACE && tokens[i].type != TOK_EOF) i++;
+            if (tokens[i].type == TOK_LBRACE) {
+                size_t end = find_block_end(tokens, token_count, i + 1);
+                i = end + 1;
+            }
+            continue;
+        }
         if (tokens[i].type != TOK_FUN_START) { i++; continue; }
         i++;
 
@@ -323,6 +349,80 @@ Function *get_function(const char *name) {
     for (size_t i = 0; i < function_count; i++)
         if (strcmp(functions[i].name, name) == 0) return &functions[i];
     return NULL;
+}
+
+static void parse_structs(Token tokens[], size_t token_count) {
+    memset(structs, 0, sizeof(structs));
+    struct_count = 0;
+    size_t i = 0;
+    while (i < token_count && tokens[i].type != TOK_EOF) {
+        if (tokens[i].type != TOK_STRUCT) { i++; continue; }
+        i++;
+        if (tokens[i].type != TOK_IDENT) continue;
+        if (tokens[i + 1].type != TOK_LBRACE) { i++; continue; }
+        if (struct_count >= MAX_STRUCTS) break;
+        Struct *c = &structs[struct_count];
+        strncpy(c->name, tokens[i].text, MAX_NAME_LEN - 1);
+        c->field_count = 0;
+        c->method_count = 0;
+        i += 2;
+        size_t end = find_block_end(tokens, token_count, i);
+        size_t j = i;
+        while (j < end) {
+            if (tokens[j].type == TOK_VAR && j + 1 < end && tokens[j + 1].type == TOK_IDENT) {
+                j++;
+                if (c->field_count >= MAX_STRUCT_FIELDS) { j++; continue; }
+                strncpy(c->field_names[c->field_count], tokens[j].text, MAX_NAME_LEN - 1);
+                j++;
+                if (tokens[j].type == TOK_ASSIGN) j++;
+                if (tokens[j].type == TOK_STRING) {
+                    c->field_is_string[c->field_count] = 1;
+                    snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "\"%s\"", tokens[j].text);
+                    j++;
+                } else if (tokens[j].type == TOK_NUMBER) {
+                    c->field_is_string[c->field_count] = 0;
+                    strncpy(c->field_defaults[c->field_count], tokens[j].text, MAX_STRING_LEN - 1);
+                    j++;
+                } else if (tokens[j].type == TOK_MINUS && tokens[j + 1].type == TOK_NUMBER) {
+                    c->field_is_string[c->field_count] = 0;
+                    snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "-%s", tokens[j + 1].text);
+                    j += 2;
+                } else {
+                    strcpy(c->field_defaults[c->field_count], "0");
+                }
+                c->field_count++;
+                continue;
+            }
+            if (tokens[j].type == TOK_FUN_START && j + 1 < end && tokens[j + 1].type == TOK_IDENT) {
+                j++;
+                if (c->method_count >= MAX_STRUCT_METHODS) { j++; continue; }
+                Function *f = &c->methods[c->method_count];
+                strncpy(f->name, tokens[j].text, MAX_NAME_LEN - 1);
+                f->param_count = 0;
+                j++;
+                if (tokens[j].type == TOK_LBRACKET) {
+                    j++;
+                    while (tokens[j].type != TOK_RBRACKET && tokens[j].type != TOK_EOF) {
+                        if (tokens[j].type == TOK_IDENT && f->param_count < MAX_FUNC_PARAMS)
+                            strncpy(f->param_names[f->param_count++], tokens[j].text, MAX_NAME_LEN - 1);
+                        j++;
+                        if (tokens[j].type == TOK_COMMA) j++;
+                    }
+                    if (tokens[j].type == TOK_RBRACKET) j++;
+                }
+                if (tokens[j].type != TOK_LBRACE) continue;
+                j++;
+                size_t mend = find_block_end(tokens, token_count, j);
+                f->token_count = copy_block(tokens, j, mend, f->tokens);
+                c->method_count++;
+                j = mend + 1;
+                continue;
+            }
+            j++;
+        }
+        struct_count++;
+        i = end + 1;
+    }
 }
 
 static void write_indent(FILE *out, int indent) {
@@ -419,6 +519,24 @@ static size_t emit_value(Token tokens[], size_t i, FILE *out) {
             if (tokens[i].type == TOK_RSQUARE) i++;
             fputs(")]", out);
             return i;
+        }
+        if (tokens[i + 1].type == TOK_DOT && tokens[i + 2].type == TOK_IDENT) {
+            if (tokens[i + 3].type == TOK_LBRACKET) {
+                fprintf(out, "%s.%s(", tokens[i].text, tokens[i + 2].text);
+                i += 4;
+                int first_d = 1;
+                while (tokens[i].type != TOK_RBRACKET && tokens[i].type != TOK_EOF) {
+                    if (!first_d) fputs(", ", out);
+                    first_d = 0;
+                    i = emit_expression(tokens, i, out);
+                    if (tokens[i].type == TOK_COMMA) i++;
+                }
+                fputc(')', out);
+                if (tokens[i].type == TOK_RBRACKET) i++;
+                return i;
+            }
+            fprintf(out, "%s.%s", tokens[i].text, tokens[i + 2].text);
+            return i + 3;
         }
         fputs(tokens[i].text, out);
         return i + 1;
@@ -555,14 +673,35 @@ static int param_is_array(const char *param_name, Token tokens[], size_t token_c
     return 0;
 }
 
+static const char *param_struct_type(const char *param_name, Token tokens[], size_t token_count) {
+    for (size_t i = 0; i + 2 < token_count; i++) {
+        if (tokens[i].type == TOK_IDENT && strcmp(tokens[i].text, param_name) == 0
+                && tokens[i + 1].type == TOK_DOT && tokens[i + 2].type == TOK_IDENT) {
+            const char *member = tokens[i + 2].text;
+            for (size_t ci = 0; ci < struct_count; ci++) {
+                for (size_t mi = 0; mi < structs[ci].method_count; mi++)
+                    if (strcmp(structs[ci].methods[mi].name, member) == 0) return structs[ci].name;
+                for (size_t fi = 0; fi < structs[ci].field_count; fi++)
+                    if (strcmp(structs[ci].field_names[fi], member) == 0) return structs[ci].name;
+            }
+        }
+    }
+    return NULL;
+}
+
 static void emit_func_signature(FILE *out, Function *f) {
     RetType rt = detect_return_type(f->tokens, f->token_count);
     const char *ret = rt == RT_STRING ? "std::string" : rt == RT_DOUBLE ? "double" : "void";
     fprintf(out, "%s %s(", ret, f->name);
     for (size_t pi = 0; pi < f->param_count; pi++) {
         if (pi > 0) fputs(", ", out);
-        if (param_is_array(f->param_names[pi], f->tokens, f->token_count)) fprintf(out, "_KnTable& %s", f->param_names[pi]);
-        else fprintf(out, "double %s", f->param_names[pi]);
+        if (param_is_array(f->param_names[pi], f->tokens, f->token_count))
+            fprintf(out, "_KnTable& %s", f->param_names[pi]);
+        else {
+            const char *ct = param_struct_type(f->param_names[pi], f->tokens, f->token_count);
+            if (ct) fprintf(out, "%s& %s", ct, f->param_names[pi]);
+            else fprintf(out, "double %s", f->param_names[pi]);
+        }
     }
     fputc(')', out);
 }
@@ -570,6 +709,15 @@ static void emit_func_signature(FILE *out, Function *f) {
 void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int indent, int is_main) {
     size_t i = 0;
     while (i < token_count && tokens[i].type != TOK_EOF) {
+        if (tokens[i].type == TOK_STRUCT) {
+            i++;
+            if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_IDENT) {
+                write_indent(out, indent);
+                fprintf(out, "%s %s;\n", tokens[i].text, tokens[i + 1].text);
+                i += 2;
+            }
+            continue;
+        }
         if (is_builtin_call(tokens, i, "createWindow")) {
             i += 2;
             char b[3][ARG_BUF_LEN];
@@ -707,6 +855,13 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
                 continue;
             }
 
+            if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_DOT) {
+                fprintf(out, "auto %s = ", name);
+                i = emit_expression(tokens, i, out);
+                fputs(";\n", out);
+                continue;
+            }
+
             fprintf(out, "double %s = ", name);
             i = emit_expression(tokens, i, out);
             fputs(";\n", out);
@@ -732,6 +887,38 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             }
             fputs(";\n", out);
             continue;
+        }
+
+        if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_DOT &&
+                tokens[i + 2].type == TOK_IDENT) {
+            if (tokens[i + 3].type == TOK_LBRACKET) {
+                write_indent(out, indent);
+                fprintf(out, "%s.%s(", tokens[i].text, tokens[i + 2].text);
+                i += 4;
+                int first_arg = 1;
+                while (tokens[i].type != TOK_RBRACKET && tokens[i].type != TOK_EOF) {
+                    if (!first_arg) fputs(", ", out);
+                    first_arg = 0;
+                    i = emit_expression(tokens, i, out);
+                    if (tokens[i].type == TOK_COMMA) i++;
+                }
+                if (tokens[i].type == TOK_RBRACKET) i++;
+                fputs(");\n", out);
+                continue;
+            }
+            if (tokens[i + 3].type == TOK_ASSIGN) {
+                write_indent(out, indent);
+                fprintf(out, "%s.%s = ", tokens[i].text, tokens[i + 2].text);
+                i += 4;
+                if (tokens[i].type == TOK_STRING) {
+                    fprintf(out, "\"%s\";\n", tokens[i].text);
+                    i++;
+                } else {
+                    i = emit_expression(tokens, i, out);
+                    fputs(";\n", out);
+                }
+                continue;
+            }
         }
 
         if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_ASSIGN) {
@@ -952,6 +1139,7 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
     sdl_window_created = 0;
     double t0, t1;
     if (stats) t0 = get_time_ms();
+    parse_structs(tokens, token_count);
     parse_functions(tokens, token_count);
     if (stats) {
         t1 = get_time_ms();
@@ -1066,6 +1254,37 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "#endif\n\n",
         out);
 #endif
+
+    for (size_t ci = 0; ci < struct_count; ci++) {
+        Struct *c = &structs[ci];
+        fprintf(out, "struct %s {\n", c->name);
+        for (size_t fi2 = 0; fi2 < c->field_count; fi2++) {
+            if (c->field_is_string[fi2])
+                fprintf(out, "    std::string %s = %s;\n", c->field_names[fi2], c->field_defaults[fi2]);
+            else
+                fprintf(out, "    double %s = %s;\n", c->field_names[fi2], c->field_defaults[fi2]);
+        }
+        for (size_t mi = 0; mi < c->method_count; mi++) {
+            Function *m = &c->methods[mi];
+            RetType rt = detect_return_type(m->tokens, m->token_count);
+            const char *ret_str = rt == RT_STRING ? "std::string" : rt == RT_DOUBLE ? "double" : "void";
+            fprintf(out, "    %s %s(", ret_str, m->name);
+            for (size_t pi = 0; pi < m->param_count; pi++) {
+                if (pi > 0) fputs(", ", out);
+                if (param_is_array(m->param_names[pi], m->tokens, m->token_count))
+                    fprintf(out, "_KnTable& %s", m->param_names[pi]);
+                else {
+                    const char *ct = param_struct_type(m->param_names[pi], m->tokens, m->token_count);
+                    if (ct) fprintf(out, "%s& %s", ct, m->param_names[pi]);
+                    else fprintf(out, "double %s", m->param_names[pi]);
+                }
+            }
+            fputs(") {\n", out);
+            convert_tokens_to_cpp(m->tokens, m->token_count, out, 2, 0);
+            fputs("    }\n", out);
+        }
+        fputs("};\n\n", out);
+    }
 
     for (size_t fi = 0; fi < function_count; fi++) {
         if (strcmp(functions[fi].name, "main") == 0) continue;
