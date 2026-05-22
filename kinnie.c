@@ -333,6 +333,10 @@ static const char *map_builtin(const char *name) {
     if (!strcmp(name, "sin")) return "std::sin";
     if (!strcmp(name, "cos")) return "std::cos";
     if (!strcmp(name, "abs")) return "std::fabs";
+    if (!strcmp(name, "exp")) return "std::exp";
+    if (!strcmp(name, "log")) return "std::logf";
+    if (!strcmp(name, "log10")) return "std::log10f";
+    if (!strcmp(name, "pow")) return "std::pow";
     if (!strcmp(name, "min")) return "std::min<double>";
     if (!strcmp(name, "max")) return "std::max<double>";
     if (!strcmp(name, "lerp")) return "_lerp";

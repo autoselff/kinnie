@@ -1,7 +1,7 @@
 # Kinnie
 ## Setup
 
-**Important! Remember, to use the built-in graphics library, you must have the SDL library downloaded. Also, make sure you have gcc and g++ compilers installed. For text rendering with `drawText()`, you need SDL_ttf. Kinnie does not support the underscore character in variable and function names.**
+**Important! Remember, to use the built-in graphics library, you must have the SDL and SDL_ttf library installed. Also, make sure you have gcc and g++ compilers installed. Kinnie does not support the underscore character in variable and function names.**
 
 Debian
 ```bash
@@ -122,6 +122,10 @@ var div = 20 / 4
 | `sin(x)` | sine of x (radians) |
 | `cos(x)` | cosine of x (radians) |
 | `abs(x)` | absolute value |
+| `exp(x)` | e raised to the power x |
+| `log(x)` | natural logarithm of x |
+| `log10(x)` | base-10 logarithm of x |
+| `pow(a, b)` | a raised to the power b |
 | `min(a, b)` | smaller of two values |
 | `max(a, b)` | larger of two values |
 | `mod(a, b)` | floating-point modulo |
