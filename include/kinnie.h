@@ -21,7 +21,7 @@
 #  define HAVE_SDL_TTF 0
 #endif
 
-#define KINNIE_VERSION      "3.0.0"
+#define KINNIE_VERSION      "3.0.1"
 #define MAX_TOKENS          2048
 #define MAX_EXPANDED_TOKENS 8192
 #define MAX_FUNCTIONS       64
