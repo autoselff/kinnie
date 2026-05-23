@@ -12,5 +12,4 @@ fun main() {
     out "{tab[3]}\n"    // [3, 4]
     foo(tab)
     out "{tab}\n"       // [1, 2, "Hello", [4], "Test"]
-
 }
