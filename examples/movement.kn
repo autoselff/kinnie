@@ -26,7 +26,7 @@ str Player {
 
 
 fun main() {
-    createWindow(800, 600, "Kinnie Simulator")
+    createWindow(800, 600, "Movement")
     setFont("/usr/share/fonts/Adwaita/AdwaitaMono-Regular.ttf")
     Player player
 

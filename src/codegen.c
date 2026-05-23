@@ -211,6 +211,26 @@ static size_t emit_value(Token tokens[], size_t i, FILE *out) {
         return i;
     }
 
+    if (tokens[i].type == TOK_LSQUARE) {
+        fputs("_KnVal(_KnTable{", out);
+        i++;
+        int _first = 1;
+        while (tokens[i].type != TOK_RSQUARE && tokens[i].type != TOK_EOF) {
+            if (!_first) fputs(", ", out);
+            _first = 0;
+            if (tokens[i].type == TOK_STRING) {
+                fprintf(out, "\"%s\"", tokens[i].text);
+                i++;
+            } else {
+                i = emit_expression(tokens, i, out);
+            }
+            if (tokens[i].type == TOK_COMMA) i++;
+        }
+        if (tokens[i].type == TOK_RSQUARE) i++;
+        fputs("})", out);
+        return i;
+    }
+
     fprintf(stderr, "Expected value in expression: got type %d text '%s'\n",
             tokens[i].type, tokens[i].text);
     exit(1);
@@ -702,6 +722,63 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
         }
 
         if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LSQUARE) {
+            size_t _scan = i + 2;
+            int _sdepth = 1;
+            while (_scan < token_count && tokens[_scan].type != TOK_EOF) {
+                if (tokens[_scan].type == TOK_LSQUARE) _sdepth++;
+                else if (tokens[_scan].type == TOK_RSQUARE) { _sdepth--; if (_sdepth == 0) break; }
+                _scan++;
+            }
+            if (tokens[_scan].type == TOK_RSQUARE
+                && tokens[_scan+1].type == TOK_DOT
+                && (tokens[_scan+2].type == TOK_IDENT || tokens[_scan+2].type == TOK_ADD)
+                && tokens[_scan+3].type == TOK_LBRACKET
+                && (strcmp(tokens[_scan+2].text, "remove") == 0
+                    || strcmp(tokens[_scan+2].text, "add") == 0)) {
+                const char *_arrname = tokens[i].text;
+                const char *_method  = tokens[_scan+2].text;
+                i += 2;
+                write_indent(out, indent);
+                fprintf(out, "{ auto& _kn_ref = %s[(int)(", _arrname);
+                i = emit_expression(tokens, i, out);
+                if (tokens[i].type == TOK_RSQUARE) i++;
+                fputs(")]._a;\n", out);
+                i++;
+                i++;
+                i++;
+                write_indent(out, indent + 1);
+                if (strcmp(_method, "remove") == 0) {
+                    fputs("_kn_ref.erase(_kn_ref.begin() + (int)(", out);
+                    i = emit_expression(tokens, i, out);
+                    fputs("));\n", out);
+                } else {
+                    if (tokens[i].type == TOK_LSQUARE) {
+                        fputs("{ _KnTable _tmp_add;\n", out);
+                        i++;
+                        while (tokens[i].type != TOK_RSQUARE && tokens[i].type != TOK_EOF) {
+                            write_indent(out, indent + 2);
+                            fputs("_tmp_add.push_back(_KnVal(", out);
+                            if (tokens[i].type == TOK_STRING) { fprintf(out, "\"%s\"", tokens[i].text); i++; }
+                            else i = emit_expression(tokens, i, out);
+                            fputs("));\n", out);
+                            if (tokens[i].type == TOK_COMMA) i++;
+                        }
+                        if (tokens[i].type == TOK_RSQUARE) i++;
+                        write_indent(out, indent + 1);
+                        fputs("_kn_ref.push_back(_KnVal(_tmp_add)); }\n", out);
+                    } else {
+                        fputs("_kn_ref.push_back(_KnVal(", out);
+                        if (tokens[i].type == TOK_STRING) { fprintf(out, "\"%s\"", tokens[i].text); i++; }
+                        else i = emit_expression(tokens, i, out);
+                        fputs("));\n", out);
+                    }
+                }
+                if (tokens[i].type == TOK_RBRACKET) i++;
+                write_indent(out, indent);
+                fputs("}\n", out);
+                continue;
+            }
+
             char name[MAX_NAME_LEN];
             strcpy(name, tokens[i].text);
             i += 2;
@@ -728,11 +805,49 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
         }
 
         if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_DOT
-                && tokens[i + 2].type == TOK_IDENT) {
+                && (tokens[i + 2].type == TOK_IDENT || tokens[i + 2].type == TOK_ADD)) {
             if (tokens[i + 3].type == TOK_LBRACKET) {
-                write_indent(out, indent);
-                fprintf(out, "%s.%s(", tokens[i].text, tokens[i + 2].text);
+                const char *_obj    = tokens[i].text;
+                const char *_method = tokens[i + 2].text;
                 i += 4;
+
+                if (strcmp(_method, "add") == 0) {
+                    write_indent(out, indent);
+                    if (tokens[i].type == TOK_LSQUARE) {
+                        fputs("{ _KnTable _tmp_add;\n", out);
+                        i++;
+                        while (tokens[i].type != TOK_RSQUARE && tokens[i].type != TOK_EOF) {
+                            write_indent(out, indent + 1);
+                            fputs("_tmp_add.push_back(_KnVal(", out);
+                            if (tokens[i].type == TOK_STRING) { fprintf(out, "\"%s\"", tokens[i].text); i++; }
+                            else i = emit_expression(tokens, i, out);
+                            fputs("));\n", out);
+                            if (tokens[i].type == TOK_COMMA) i++;
+                        }
+                        if (tokens[i].type == TOK_RSQUARE) i++;
+                        write_indent(out, indent);
+                        fprintf(out, "%s.push_back(_KnVal(_tmp_add)); }\n", _obj);
+                    } else {
+                        fprintf(out, "%s.push_back(_KnVal(", _obj);
+                        if (tokens[i].type == TOK_STRING) { fprintf(out, "\"%s\"", tokens[i].text); i++; }
+                        else i = emit_expression(tokens, i, out);
+                        fputs("));\n", out);
+                    }
+                    if (tokens[i].type == TOK_RBRACKET) i++;
+                    continue;
+                }
+
+                if (strcmp(_method, "remove") == 0) {
+                    write_indent(out, indent);
+                    fprintf(out, "%s.erase(%s.begin() + (int)(", _obj, _obj);
+                    i = emit_expression(tokens, i, out);
+                    fputs("));\n", out);
+                    if (tokens[i].type == TOK_RBRACKET) i++;
+                    continue;
+                }
+
+                write_indent(out, indent);
+                fprintf(out, "%s.%s(", _obj, _method);
                 int first_arg = 1;
                 while (tokens[i].type != TOK_RBRACKET && tokens[i].type != TOK_EOF) {
                     if (!first_arg) fputs(", ", out);
@@ -1036,12 +1151,31 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "    \n"
         "    friend std::ostream& operator<<(std::ostream& os, const _KnVal& v) {\n"
         "        if (v._type == STRING) return os << v._t;\n"
-        "        if (v._type == ARRAY) return os << \"[array]\";\n"
+        "        if (v._type == ARRAY) {\n"
+        "            os << \"[\";\n"
+        "            for (size_t _i = 0; _i < v._a.size(); _i++) {\n"
+        "                if (_i > 0) os << \", \";\n"
+        "                if (v._a[_i]._type == STRING) os << \"\\\"\" << v._a[_i]._t << \"\\\"\";\n"
+        "                else if (v._a[_i]._type == ARRAY) os << v._a[_i];\n"
+        "                else { std::ostringstream _s; double _d = v._a[_i]._n; if (_d == (long long)_d) _s << (long long)_d; else _s << _d; os << _s.str(); }\n"
+        "            }\n"
+        "            return os << \"]\";\n"
+        "        }\n"
         "        return os << v._n;\n"
         "    }\n"
         "};\n"
         "using _KnTable = std::vector<_KnVal>;\n"
-        "using _KnTable2D = _KnTable;\n\n"
+        "using _KnTable2D = _KnTable;\n"
+        "inline std::ostream& operator<<(std::ostream& os, const _KnTable& t) {\n"
+        "    os << \"[\";\n"
+        "    for (size_t _i = 0; _i < t.size(); _i++) {\n"
+        "        if (_i > 0) os << \", \";\n"
+        "        if (t[_i]._type == _KnVal::STRING) os << \"\\\"\" << t[_i]._t << \"\\\"\";\n"
+        "        else if (t[_i]._type == _KnVal::ARRAY) os << t[_i];\n"
+        "        else { std::ostringstream _s; double _d = t[_i]._n; if (_d == (long long)_d) _s << (long long)_d; else _s << _d; os << _s.str(); }\n"
+        "    }\n"
+        "    return os << \"]\";\n"
+        "}\n\n"
         "std::mt19937 _rng(std::random_device{}());\n"
         "double _random(double min, double max) {\n"
         "    std::uniform_real_distribution<double> dist(min, max);\n"

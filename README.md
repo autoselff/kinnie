@@ -79,6 +79,39 @@ numbers[0] = 15
 mixed[2] = "new text"
 ```
 
+Printing arrays:
+```kinnie
+var tab = [1, 2, "Hello", [3, 4]]
+out "{tab}\n"       // [1, 2, "Hello", [3, 4]]
+out "{tab[3]}\n"    // [3, 4]
+```
+
+#### Array Methods
+
+##### `.add(value)`
+Appends a value to the end of an array. Accepts numbers, strings, and nested arrays.
+```kinnie
+var tab = [1, 2, 3]
+tab.add(4)         // [1, 2, 3, 4]
+tab.add("hello")   // [1, 2, 3, 4, "hello"]
+tab.add([5, 6])    // [1, 2, 3, 4, "hello", [5, 6]]
+```
+
+##### `.remove(index)`
+Removes the element at the given index.
+```kinnie
+var tab = [1, 2, 3, 4]
+tab.remove(0)              // [2, 3, 4]
+tab.remove(len(tab) - 1)  // removes last element
+```
+
+Both methods work on nested arrays too:
+```kinnie
+var tab = [1, 2, [3, 4]]
+tab[2].remove(0)   // tab is now [1, 2, [4]]
+tab[2].add(99)     // tab is now [1, 2, [4, 99]]
+```
+
 Array in loops:
 ```kinnie
 var tab = [10, 11, 12, 13, 4235]
@@ -592,4 +625,4 @@ playerX = playerX + speed * deltaTime
 - Maximum 32 structs, 32 fields per struct, 16 methods per struct
 - Structs cannot be returned from functions or initialized with `= expr`
 - Arrays can be nested arbitrarily (unlimited dimensions)
-- No built-in array methods like `push()` or `pop()` — use `len()` for size and direct indexing `[]` for access
+- Array methods: `.add(value)` appends, `.remove(index)` removes by index; both work on nested arrays

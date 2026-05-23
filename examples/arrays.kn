@@ -1,0 +1,16 @@
+fun foo(t) {
+    t.add("Test")
+    t.add([5, 6])
+    t.remove(len(t) - 1)
+    t[3].remove(0)
+}
+
+fun main() {
+    var tab = [1, 2, "Hello", [3, 4]]
+
+    out "{tab}\n"       // [1, 2, "Hello", [3, 4]]
+    out "{tab[3]}\n"    // [3, 4]
+    foo(tab)
+    out "{tab}\n"       // [1, 2, "Hello", [4], "Test"]
+
+}

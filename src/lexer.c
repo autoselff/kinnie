@@ -129,11 +129,13 @@ size_t process_includes(Token tokens[], size_t token_count, Token output[], size
             continue;
         }
 
-        i++;
-        if (tokens[i].type != TOK_STRING) {
-            fprintf(stderr, "Expected filename after 'add'\n");
-            exit(1);
+        if (tokens[i + 1].type != TOK_STRING) {
+            if (out_idx < max_tokens) output[out_idx++] = tokens[i];
+            i++;
+            continue;
         }
+
+        i++;
         const char *filename = tokens[i].text;
         i++;
 
