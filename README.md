@@ -233,6 +233,29 @@ var prod = 4 * 5
 var div = 20 / 4
 ```
 
+### Compound Assignment Operators
+
+- `+=` add and assign
+- `-=` subtract and assign
+- `*=` multiply and assign
+- `/=` divide and assign
+
+```kinnie
+var x = 100
+x += 50    // x = 150
+x -= 30    // x = 120
+x *= 2     // x = 240
+x /= 4     // x = 60
+```
+
+### Increment / Decrement
+
+```kinnie
+var i = 0
+i++    // i = 1
+i--    // i = 0
+```
+
 ### Math Functions
 
 | Function | Description |
@@ -299,30 +322,70 @@ if y > 10 {
 }
 ```
 
+### Logical Operators
+
+- `and` — logical AND
+- `or` — logical OR
+- `not` — logical NOT
+
+```kinnie
+if a > 0 and b > 0 {
+    out "both positive\n"
+}
+
+if a > 10 or b > 10 {
+    out "at least one is big\n"
+}
+
+if not a == 99 {
+    out "a is not 99\n"
+}
+```
+
 ### Conditional Statements
 
 ```kinnie
-if condition {
-    out "Condition is true"
-}
-else {
-    out "Condition is false"
+if score >= 90 {
+    out "A\n"
+} else if score >= 75 {
+    out "B\n"
+} else if score >= 60 {
+    out "C\n"
+} else {
+    out "F\n"
 }
 ```
 
 ### Loops
 
+Count loop — iterates N times:
 ```kinnie
 var i = 5
 rep i {
-    out "{i}," // 0,1,2,3,
-    if i == 3 {
-        stop
-    }
+    out "{i}\n"
 }
 ```
 
-The `rep` loop iterates N times. The counter variable must be defined beforehand.
+While loop — repeats while condition is true:
+```kinnie
+var x = 0
+rep x < 10 {
+    out "{x}\n"
+    x++
+}
+```
+
+Use `stop` to break out of a loop early:
+```kinnie
+var i = 0
+rep 20 {
+    if i == 5 {
+        stop
+    }
+    out "{i}\n"
+    i++
+}
+```
 
 ### Output
 

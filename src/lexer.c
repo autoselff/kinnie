@@ -19,6 +19,9 @@ static const struct { const char *kw; TokenType type; } KEYWORDS[] = {
     {"add",        TOK_ADD},
     {"stop",       TOK_STOP},
     {"str",        TOK_STRUCT},
+    {"and",        TOK_AND},
+    {"or",         TOK_OR},
+    {"not",        TOK_NOT},
 };
 
 static TokenType lookup_keyword(const char *text) {
@@ -42,6 +45,11 @@ size_t tokenize(const char *src, Token tokens[]) {
         if (src[i] == '/' && src[i + 1] == '/') {
             while (src[i] && src[i] != '\n') i++;
             continue;
+        }
+
+        if (t + 1 >= MAX_TOKENS) {
+            fprintf(stderr, "Error: too many tokens (max %d). Split your file or increase MAX_TOKENS.\n", MAX_TOKENS);
+            exit(1);
         }
 
         if (src[i] == '"') {
@@ -77,13 +85,20 @@ size_t tokenize(const char *src, Token tokens[]) {
             continue;
         }
 
+        if (src[i] == '+' && src[i + 1] == '+') { tokens[t++].type = TOK_INCREMENT; i += 2; continue; }
+        if (src[i] == '-' && src[i + 1] == '-') { tokens[t++].type = TOK_DECREMENT; i += 2; continue; }
+
         if (src[i + 1] == '=') {
             TokenType tt = TOK_UNKNOWN;
             switch (src[i]) {
-                case '=': tt = TOK_EQUALS;      break;
-                case '!': tt = TOK_NOT_EQUALS;  break;
-                case '>': tt = TOK_MORE_EQUALS; break;
-                case '<': tt = TOK_LESS_EQUALS; break;
+                case '=': tt = TOK_EQUALS;       break;
+                case '!': tt = TOK_NOT_EQUALS;   break;
+                case '>': tt = TOK_MORE_EQUALS;  break;
+                case '<': tt = TOK_LESS_EQUALS;  break;
+                case '+': tt = TOK_PLUS_ASSIGN;  break;
+                case '-': tt = TOK_MINUS_ASSIGN; break;
+                case '*': tt = TOK_MUL_ASSIGN;   break;
+                case '/': tt = TOK_DIV_ASSIGN;   break;
                 default: break;
             }
             if (tt != TOK_UNKNOWN) {

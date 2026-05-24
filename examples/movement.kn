@@ -24,17 +24,36 @@ str Player {
     }
 }
 
+str Color {
+    var r = 0
+    var g = 0
+    var b = 0
+
+    fun setColor(rv, gv, bv) {
+        r = rv
+        g = gv
+        b = bv
+    }
+}
 
 fun main() {
     createWindow(800, 600, "Movement")
     setFont("/usr/share/fonts/Adwaita/AdwaitaMono-Regular.ttf")
     Player player
+    player.color = [220, 160, 40]
+
+    Color color
+    color.setColor(20, 30, 40)
 
     var i = 0
     rep 1 {
-        clearScreen(0, 0, 0)
+        clearScreen(color.r, color.g, color.b)
         player.draw()
         player.draw()
         player.move()
+
+        if keyPressed("escape") {
+            stop
+        }
     }
 }

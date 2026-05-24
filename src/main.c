@@ -119,9 +119,9 @@ int main(int argc, char **argv) {
     if (len > 4 && strcmp(basename + len - 4, ".cpp") == 0)
         basename[len - 4] = '\0';
 
-    char compile_cmd[512];
+    char compile_cmd[1024];
     snprintf(compile_cmd, sizeof(compile_cmd),
-        "g++ -std=c++17 %s -o %s $(pkg-config --cflags --libs sdl2 SDL2_ttf 2>/dev/null)",
+        "g++ -std=c++17 -w %s -o %s $(pkg-config --cflags --libs sdl2 SDL2_ttf 2>/dev/null)",
         output_path, basename);
 
     fprintf(stderr, "Compiling...\n");
@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
 
     if (!compile_only && ret == 0) {
         fprintf(stderr, "Running...\n");
-        char run_cmd[256];
+        char run_cmd[512];
         snprintf(run_cmd, sizeof(run_cmd), "./%s", basename);
         system(run_cmd);
     }

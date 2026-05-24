@@ -1,0 +1,116 @@
+fun grade(score) {
+    if score >= 90 {
+        ret "A"
+    } else if score >= 75 {
+        ret "B"
+    } else if score >= 60 {
+        ret "C"
+    } else {
+        ret "F"
+    }
+}
+
+fun sumTo(n) {
+    var total = 0
+    rep n > 0 {
+        total += n
+        n--
+    }
+    ret total
+}
+
+fun firstAbove(tab, threshold) {
+    var l = len(tab)
+    var i = 0
+    rep i < l {
+        if tab[i] > threshold {
+            ret tab[i]
+        }
+        i++
+    }
+    ret 0 - 1
+}
+
+fun main() {
+    out "=== else if (grade) ===\n"
+    out "{grade(95)}\n"
+    out "{grade(80)}\n"
+    out "{grade(65)}\n"
+    out "{grade(40)}\n"
+
+    out "=== rep condition (while) ===\n"
+    var x = 1
+    rep x <= 5 {
+        out "{x} "
+        x++
+    }
+    out "\n"
+
+    out "=== stop = break ===\n"
+    var i = 0
+    var n = 20
+    rep n {
+        if i == 5 {
+            stop
+        }
+        out "{i} "
+        i++
+    }
+    out "\n"
+
+    out "=== compound assignment ===\n"
+    var v = 100
+    v -= 40
+    v *= 2
+    v /= 3
+    v += 1
+    out "{v}\n"
+
+    out "=== i++ / i-- ===\n"
+    var c = 0
+    var steps = 4
+    rep steps {
+        c++
+    }
+    var steps2 = 2
+    rep steps2 {
+        c--
+    }
+    out "{c}\n"
+
+    out "=== and / or / not ===\n"
+    var a = 4
+    var b = 9
+    if a > 0 and b > 0 {
+        out "both pos\n"
+    }
+    if a > 10 or b > 5 {
+        out "at least one big\n"
+    }
+    if not a == 99 {
+        out "a != 99\n"
+    }
+    if not a > 10 and not b < 0 {
+        out "a small and b non-neg\n"
+    }
+
+    out "=== while + and in sumTo ===\n"
+    out "{sumTo(10)}\n"
+
+    out "=== firstAbove (while + break) ===\n"
+    var tab = [3, 7, 1, 15, 4]
+    out "{firstAbove(tab, 10)}\n"
+
+    out "=== nested while + compound ===\n"
+    var row = 1
+    rep row <= 3 {
+        var col = 1
+        rep col <= 3 {
+            var val = row * col
+            out "{val} "
+            col++
+        }
+        out "\n"
+        row++
+    }
+}

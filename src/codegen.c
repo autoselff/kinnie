@@ -26,8 +26,8 @@ static const char *map_builtin(const char *name) {
     if (!strcmp(name, "cos"))       return "std::cos";
     if (!strcmp(name, "abs"))       return "std::fabs";
     if (!strcmp(name, "exp"))       return "std::exp";
-    if (!strcmp(name, "log"))       return "std::logf";
-    if (!strcmp(name, "log10"))     return "std::log10f";
+    if (!strcmp(name, "log"))       return "std::log";
+    if (!strcmp(name, "log10"))     return "std::log10";
     if (!strcmp(name, "pow"))       return "std::pow";
     if (!strcmp(name, "sqrt"))      return "std::sqrt";
     if (!strcmp(name, "min"))       return "std::min<double>";
@@ -63,6 +63,45 @@ static int is_builtin_call(Token tokens[], size_t i, const char *name) {
         && strcmp(tokens[i].text, name) == 0;
 }
 
+static void emit_string_expr(const char *str, FILE *out) {
+    int has_interp = 0;
+    for (size_t si = 0; str[si]; si++) {
+        if (str[si] == '{') { has_interp = 1; break; }
+    }
+    if (!has_interp) {
+        fputc('"', out);
+        for (size_t si = 0; str[si]; si++) {
+            if (str[si] == '"') fputs("\\\"", out);
+            else fputc(str[si], out);
+        }
+        fputc('"', out);
+        return;
+    }
+    fputs("(std::ostringstream()", out);
+    size_t j = 0;
+    while (str[j] != '\0') {
+        if (str[j] == '{') {
+            j++;
+            char vname[MAX_NAME_LEN];
+            size_t vi = 0;
+            while (str[j] != '}' && str[j] != '\0' && vi + 1 < MAX_NAME_LEN)
+                vname[vi++] = str[j++];
+            vname[vi] = '\0';
+            if (str[j] == '}') j++;
+            fprintf(out, " << %s", vname);
+        } else {
+            fputs(" << \"", out);
+            while (str[j] != '\0' && str[j] != '{') {
+                if (str[j] == '"') fputs("\\\"", out);
+                else fputc(str[j], out);
+                j++;
+            }
+            fputc('"', out);
+        }
+    }
+    fputs(").str()", out);
+}
+
 static size_t emit_expression(Token tokens[], size_t i, FILE *out);
 
 static size_t emit_value(Token tokens[], size_t i, FILE *out) {
@@ -77,40 +116,9 @@ static size_t emit_value(Token tokens[], size_t i, FILE *out) {
     }
 
     if (tokens[i].type == TOK_STRING) {
-        const char *str = tokens[i].text;
-        int has_interp = 0;
-        for (size_t si = 0; str[si]; si++) {
-            if (str[si] == '{') { has_interp = 1; break; }
-        }
-
-        if (has_interp) {
-            fputs("_KnVal((std::ostringstream() << std::fixed << std::setprecision(1)", out);
-            size_t j = 0;
-            while (str[j] != '\0') {
-                if (str[j] == '{') {
-                    j++;
-                    char vname[MAX_NAME_LEN];
-                    size_t vi = 0;
-                    while (str[j] != '}' && str[j] != '\0' && vi + 1 < MAX_NAME_LEN)
-                        vname[vi++] = str[j++];
-                    vname[vi] = '\0';
-                    if (str[j] == '}') j++;
-                    fprintf(out, " << %s", vname);
-                } else {
-                    fputc('"', out);
-                    while (str[j] != '\0' && str[j] != '{') {
-                        if (str[j] == '"') fputs("\\\"", out);
-                        else fputc(str[j], out);
-                        j++;
-                    }
-                    fputc('"', out);
-                    fputs(" << ", out);
-                }
-            }
-            fputs(").str().c_str())", out);
-        } else {
-            fprintf(out, "_KnVal(\"%s\")", str);
-        }
+        fputs("_KnVal(", out);
+        emit_string_expr(tokens[i].text, out);
+        fputc(')', out);
         return i + 1;
     }
 
@@ -269,7 +277,7 @@ static size_t parse_call_args(Token tokens[], size_t i, char bufs[][ARG_BUF_LEN]
             }
 
             if (has_interp) {
-                bi += snprintf(buf + bi, ARG_BUF_LEN - bi, "(std::ostringstream() << std::fixed << std::setprecision(1)");
+                bi += snprintf(buf + bi, ARG_BUF_LEN - bi, "(std::ostringstream()");
                 size_t j = 0;
                 while (str[j] != '\0') {
                     if (str[j] == '{') {
@@ -439,6 +447,62 @@ static void emit_func_signature(FILE *out, Function *f) {
     fputc(')', out);
 }
 
+static int is_comp_op(TokenType t) {
+    return t == TOK_EQUALS || t == TOK_NOT_EQUALS || t == TOK_MORE ||
+           t == TOK_LESS   || t == TOK_MORE_EQUALS || t == TOK_LESS_EQUALS;
+}
+
+static size_t emit_simple_cond(Token tokens[], size_t i, FILE *out) {
+    if (tokens[i].type == TOK_NOT) {
+        fputs("!(", out);
+        i = emit_simple_cond(tokens, i + 1, out);
+        fputc(')', out);
+        return i;
+    }
+    if (tokens[i].type == TOK_KEY_PRESSED || tokens[i].type == TOK_KEY_DOWN) {
+        const char *fn = (tokens[i].type == TOK_KEY_PRESSED) ? "_key_pressed" : "_key_down";
+        i++;
+        if (tokens[i].type == TOK_LBRACKET) i++;
+        if (tokens[i].type == TOK_STRING) { fprintf(out, "%s(\"%s\")", fn, tokens[i].text); i++; }
+        if (tokens[i].type == TOK_RBRACKET) i++;
+        return i;
+    }
+    if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET
+            && !map_builtin(tokens[i].text) && strcmp(tokens[i].text, "len") != 0) {
+        fprintf(out, "%s(", tokens[i].text);
+        i += 2;
+        int first = 1;
+        while (tokens[i].type != TOK_RBRACKET && tokens[i].type != TOK_EOF) {
+            if (!first) fputs(", ", out);
+            first = 0;
+            i = emit_expression(tokens, i, out);
+            if (tokens[i].type == TOK_COMMA) i++;
+        }
+        fputc(')', out);
+        if (tokens[i].type == TOK_RBRACKET) i++;
+    } else {
+        i = emit_expression(tokens, i, out);
+    }
+    if (is_comp_op(tokens[i].type)) {
+        fprintf(out, " %s ", comp_op_str(tokens[i].type));
+        i++;
+        i = emit_expression(tokens, i, out);
+    } else {
+        fputs(" != 0", out);
+    }
+    return i;
+}
+
+static size_t emit_condition(Token tokens[], size_t i, FILE *out) {
+    i = emit_simple_cond(tokens, i, out);
+    while (tokens[i].type == TOK_AND || tokens[i].type == TOK_OR) {
+        fputs(tokens[i].type == TOK_AND ? " && " : " || ", out);
+        i++;
+        i = emit_simple_cond(tokens, i, out);
+    }
+    return i;
+}
+
 void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int indent, int is_main) {
     size_t i = 0;
     while (i < token_count && tokens[i].type != TOK_EOF) {
@@ -552,7 +616,7 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
         if (tokens[i].type == TOK_STOP) {
             i++;
             write_indent(out, indent);
-            fputs("exit(0);\n", out);
+            fputs("break;\n", out);
             continue;
         }
 
@@ -703,7 +767,9 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             }
 
             if (tokens[i].type == TOK_STRING) {
-                fprintf(out, "std::string %s = \"%s\";\n", name, tokens[i].text);
+                fprintf(out, "std::string %s = ", name);
+                emit_string_expr(tokens[i].text, out);
+                fputs(";\n", out);
                 i++;
                 continue;
             }
@@ -874,6 +940,30 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             }
         }
 
+        if (tokens[i].type == TOK_IDENT
+                && (tokens[i + 1].type == TOK_INCREMENT || tokens[i + 1].type == TOK_DECREMENT)) {
+            write_indent(out, indent);
+            fprintf(out, "%s%s;\n", tokens[i].text,
+                    tokens[i + 1].type == TOK_INCREMENT ? "++" : "--");
+            i += 2;
+            continue;
+        }
+
+        if (tokens[i].type == TOK_IDENT
+                && (tokens[i + 1].type == TOK_PLUS_ASSIGN  || tokens[i + 1].type == TOK_MINUS_ASSIGN
+                 || tokens[i + 1].type == TOK_MUL_ASSIGN   || tokens[i + 1].type == TOK_DIV_ASSIGN)) {
+            const char *op =
+                tokens[i + 1].type == TOK_PLUS_ASSIGN  ? "+=" :
+                tokens[i + 1].type == TOK_MINUS_ASSIGN ? "-=" :
+                tokens[i + 1].type == TOK_MUL_ASSIGN   ? "*=" : "/=";
+            write_indent(out, indent);
+            fprintf(out, "%s %s ", tokens[i].text, op);
+            i += 2;
+            i = emit_expression(tokens, i, out);
+            fputs(";\n", out);
+            continue;
+        }
+
         if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_ASSIGN) {
             char name[MAX_NAME_LEN];
             strcpy(name, tokens[i].text);
@@ -891,7 +981,9 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             }
 
             if (tokens[i].type == TOK_STRING) {
-                fprintf(out, "%s = \"%s\";\n", name, tokens[i].text);
+                fprintf(out, "%s = ", name);
+                emit_string_expr(tokens[i].text, out);
+                fputs(";\n", out);
                 i++;
                 continue;
             }
@@ -913,18 +1005,16 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             continue;
         }
 
-        if (tokens[i].type == TOK_PRINT || tokens[i].type == TOK_PRINTL) {
-            int is_printl = (tokens[i].type == TOK_PRINTL);
+        if (tokens[i].type == TOK_PRINT) {
             i++;
             write_indent(out, indent);
-            fputs("std::cout << std::fixed << std::setprecision(1) << ", out);
+            fputs("std::cout << ", out);
             if (tokens[i].type == TOK_STRING) {
                 emit_string_stream(tokens[i].text, out);
                 i++;
             } else {
                 i = emit_expression(tokens, i, out);
             }
-            if (is_printl) fputs(" << std::endl", out);
             fputs(";\n", out);
             continue;
         }
@@ -933,35 +1023,7 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             i++;
             write_indent(out, indent);
             fputs("if (", out);
-
-            if (tokens[i].type == TOK_KEY_PRESSED || tokens[i].type == TOK_KEY_DOWN) {
-                const char *fn = (tokens[i].type == TOK_KEY_PRESSED) ? "_key_pressed" : "_key_down";
-                i++;
-                if (tokens[i].type == TOK_LBRACKET) i++;
-                if (tokens[i].type == TOK_STRING) {
-                    fprintf(out, "%s(\"%s\")", fn, tokens[i].text);
-                    i++;
-                }
-                if (tokens[i].type == TOK_RBRACKET) i++;
-            } else {
-                if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_LBRACKET) {
-                    const char *fn = tokens[i].text;
-                    i += 2;
-                    fprintf(out, "%s(", fn);
-                    i = emit_call_args_inline(tokens, i, out);
-                } else {
-                    i = emit_expression(tokens, i, out);
-                }
-                TokenType op = tokens[i].type;
-                if (op == TOK_EQUALS || op == TOK_MORE    || op == TOK_LESS
-                 || op == TOK_NOT_EQUALS || op == TOK_MORE_EQUALS || op == TOK_LESS_EQUALS) {
-                    fprintf(out, " %s ", comp_op_str(op));
-                    i++;
-                    i = emit_expression(tokens, i, out);
-                } else {
-                    fputs(" != 0", out);
-                }
-            }
+            i = emit_condition(tokens, i, out);
             fputs(") {\n", out);
 
             while (i < token_count && tokens[i].type != TOK_LBRACE && tokens[i].type != TOK_EOF) i++;
@@ -973,15 +1035,30 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             convert_tokens_to_cpp(block, bc, out, indent + 1, is_main);
             i = end + 1;
 
-            if (i < token_count && tokens[i].type == TOK_ELSE) {
+            while (i < token_count && tokens[i].type == TOK_ELSE) {
                 i++;
-                write_indent(out, indent);
-                fputs("} else {\n", out);
-                if (tokens[i].type == TOK_LBRACE) i++;
-                size_t e_end = find_block_end(tokens, token_count, i);
-                bc = copy_block(tokens, i, e_end, block);
-                convert_tokens_to_cpp(block, bc, out, indent + 1, is_main);
-                i = e_end + 1;
+                if (tokens[i].type == TOK_IF_START) {
+                    i++;
+                    write_indent(out, indent);
+                    fputs("} else if (", out);
+                    i = emit_condition(tokens, i, out);
+                    fputs(") {\n", out);
+                    while (i < token_count && tokens[i].type != TOK_LBRACE && tokens[i].type != TOK_EOF) i++;
+                    if (tokens[i].type == TOK_LBRACE) i++;
+                    size_t elif_end = find_block_end(tokens, token_count, i);
+                    bc = copy_block(tokens, i, elif_end, block);
+                    convert_tokens_to_cpp(block, bc, out, indent + 1, is_main);
+                    i = elif_end + 1;
+                } else {
+                    write_indent(out, indent);
+                    fputs("} else {\n", out);
+                    if (tokens[i].type == TOK_LBRACE) i++;
+                    size_t e_end = find_block_end(tokens, token_count, i);
+                    bc = copy_block(tokens, i, e_end, block);
+                    convert_tokens_to_cpp(block, bc, out, indent + 1, is_main);
+                    i = e_end + 1;
+                    break;
+                }
             }
 
             write_indent(out, indent);
@@ -998,6 +1075,15 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
 
             int is_simple_ident = (expr_end - expr_start == 1
                                    && tokens[expr_start].type == TOK_IDENT);
+
+            int is_while_cond = 0;
+            for (size_t ci = expr_start; ci < expr_end; ci++) {
+                TokenType tt = tokens[ci].type;
+                if (is_comp_op(tt) || tt == TOK_AND || tt == TOK_OR || tt == TOK_NOT) {
+                    is_while_cond = 1;
+                    break;
+                }
+            }
 
             size_t loop_end = find_block_end(tokens, token_count, i);
             Token loop_tokens[MAX_TOKENS];
@@ -1022,6 +1108,14 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
                 write_indent(out, indent + 2); fputs("SDL_RenderPresent(_renderer);\n", out);
                 write_indent(out, indent + 1); fputs("}\n", out);
                 write_indent(out, indent);     fputs("}\n", out);
+            } else if (is_while_cond) {
+                write_indent(out, indent);
+                fputs("while (", out);
+                emit_condition(tokens, expr_start, out);
+                fputs(") {\n", out);
+                convert_tokens_to_cpp(loop_tokens, lc, out, indent + 1, is_main);
+                write_indent(out, indent);
+                fputs("}\n", out);
             } else if (is_simple_ident) {
                 const char *c = tokens[expr_start].text;
                 write_indent(out, indent);
@@ -1072,7 +1166,9 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             i++;
             write_indent(out, indent);
             if (tokens[i].type == TOK_STRING) {
-                fprintf(out, "return \"%s\";\n", tokens[i].text);
+                fputs("return ", out);
+                emit_string_expr(tokens[i].text, out);
+                fputs(";\n", out);
                 i++;
             } else {
                 fputs("return ", out);
@@ -1143,11 +1239,38 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "    \n"
         "    size_t size() const { if (_type == ARRAY) return _a.size(); return 0; }\n"
         "    _KnVal operator[](double idx) const { if (_type == ARRAY && (int)idx < (int)_a.size()) return _a[(int)idx]; return _KnVal(); }\n"
-        "    _KnVal& operator[](double idx) { if (_type == ARRAY && (int)idx < (int)_a.size()) return _a[(int)idx]; static _KnVal dummy; return dummy; }\n"
+        "    _KnVal& operator[](double idx) { if (_type == ARRAY && (int)idx >= 0 && (int)idx < (int)_a.size()) return _a[(int)idx]; static _KnVal dummy; dummy = _KnVal(); return dummy; }\n"
         "    \n"
         "    operator double() const { return _n; }\n"
         "    operator std::string() const { return _t; }\n"
         "    operator std::vector<_KnVal>() const { return _a; }\n"
+        "    \n"
+        "    _KnVal& operator+=(double v) { _n += v; return *this; }\n"
+        "    _KnVal& operator-=(double v) { _n -= v; return *this; }\n"
+        "    _KnVal& operator*=(double v) { _n *= v; return *this; }\n"
+        "    _KnVal& operator/=(double v) { _n /= v; return *this; }\n"
+        "    _KnVal& operator++() { _n++; return *this; }\n"
+        "    _KnVal& operator--() { _n--; return *this; }\n"
+        "    _KnVal  operator++(int) { _KnVal _tmp(*this); _n++; return _tmp; }\n"
+        "    _KnVal  operator--(int) { _KnVal _tmp(*this); _n--; return _tmp; }\n"
+        "    friend bool operator> (const _KnVal& a, const _KnVal& b) { return a._n >  b._n; }\n"
+        "    friend bool operator< (const _KnVal& a, const _KnVal& b) { return a._n <  b._n; }\n"
+        "    friend bool operator>=(const _KnVal& a, const _KnVal& b) { return a._n >= b._n; }\n"
+        "    friend bool operator<=(const _KnVal& a, const _KnVal& b) { return a._n <= b._n; }\n"
+        "    friend bool operator==(const _KnVal& a, const _KnVal& b) { if(a._type==_KnVal::STRING&&b._type==_KnVal::STRING) return a._t==b._t; return a._n==b._n; }\n"
+        "    friend bool operator!=(const _KnVal& a, const _KnVal& b) { return !(a==b); }\n"
+        "    friend bool operator> (const _KnVal& a, double b) { return a._n >  b; }\n"
+        "    friend bool operator< (const _KnVal& a, double b) { return a._n <  b; }\n"
+        "    friend bool operator>=(const _KnVal& a, double b) { return a._n >= b; }\n"
+        "    friend bool operator<=(const _KnVal& a, double b) { return a._n <= b; }\n"
+        "    friend bool operator==(const _KnVal& a, double b) { return a._n == b; }\n"
+        "    friend bool operator!=(const _KnVal& a, double b) { return a._n != b; }\n"
+        "    friend bool operator> (double a, const _KnVal& b) { return a >  b._n; }\n"
+        "    friend bool operator< (double a, const _KnVal& b) { return a <  b._n; }\n"
+        "    friend bool operator>=(double a, const _KnVal& b) { return a >= b._n; }\n"
+        "    friend bool operator<=(double a, const _KnVal& b) { return a <= b._n; }\n"
+        "    friend bool operator==(double a, const _KnVal& b) { return a == b._n; }\n"
+        "    friend bool operator!=(double a, const _KnVal& b) { return a != b._n; }\n"
         "    \n"
         "    friend std::ostream& operator<<(std::ostream& os, const _KnVal& v) {\n"
         "        if (v._type == STRING) return os << v._t;\n"
@@ -1161,7 +1284,7 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "            }\n"
         "            return os << \"]\";\n"
         "        }\n"
-        "        return os << v._n;\n"
+        "        { double _d = v._n; if (_d == (long long)_d) return os << (long long)_d; return os << _d; }\n"
         "    }\n"
         "};\n"
         "using _KnTable = std::vector<_KnVal>;\n"
