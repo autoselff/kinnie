@@ -190,9 +190,15 @@ static size_t emit_value(Token tokens[], size_t i, FILE *out) {
             return i;
         }
         if (tokens[i + 1].type == TOK_DOT && tokens[i + 2].type == TOK_IDENT) {
-            if (tokens[i + 3].type == TOK_LBRACKET) {
-                fprintf(out, "%s.%s(", tokens[i].text, tokens[i + 2].text);
-                i += 4;
+            fprintf(out, "%s.%s", tokens[i].text, tokens[i + 2].text);
+            i += 3;
+            while (tokens[i].type == TOK_DOT && tokens[i + 1].type == TOK_IDENT) {
+                fprintf(out, ".%s", tokens[i + 1].text);
+                i += 2;
+            }
+            if (tokens[i].type == TOK_LBRACKET) {
+                fputc('(', out);
+                i++;
                 int first_d = 1;
                 while (tokens[i].type != TOK_RBRACKET && tokens[i].type != TOK_EOF) {
                     if (!first_d) fputs(", ", out);
@@ -202,10 +208,8 @@ static size_t emit_value(Token tokens[], size_t i, FILE *out) {
                 }
                 fputc(')', out);
                 if (tokens[i].type == TOK_RBRACKET) i++;
-                return i;
             }
-            fprintf(out, "%s.%s", tokens[i].text, tokens[i + 2].text);
-            return i + 3;
+            return i;
         }
         fputs(tokens[i].text, out);
         return i + 1;

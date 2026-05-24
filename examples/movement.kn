@@ -71,6 +71,8 @@ fun main() {
             stop
         }
 
+        var dist = distance(player.position.x, player.position.y, 0, 0)
         drawText(20, 20, "Player position: {player.position.x}, {player.position.y}", 20, 255, 255, 255)
+        drawText(20, 50, "Distance to ZERO: {dist}", 20, 255, 255, 255)
     }
 }
