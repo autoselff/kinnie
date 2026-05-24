@@ -60,10 +60,9 @@ fun main() {
     Color color
     color.setColor(20, 30, 40)
 
-    var i = 0
-    rep 1 {
+    rep true {
         clearScreen(color.r, color.g, color.b)
-        player.draw()
+
         player.draw()
         player.move()
 
