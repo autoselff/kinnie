@@ -55,5 +55,7 @@ fun main() {
         if keyPressed("escape") {
             stop
         }
+
+        drawText(20, 20, "Player position: {player.position[0]}, {player.position[1]}", 20, 255, 255, 255)
     }
 }
