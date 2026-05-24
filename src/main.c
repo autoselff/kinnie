@@ -27,7 +27,7 @@ static void print_stats(CompileStats *stats) {
 
 int main(int argc, char **argv) {
     int compile_only = 0;
-    int remove_cpp   = 0;
+    int keep_cpp   = 0;
     int show_stats   = 0;
     char *input_file = NULL;
 
@@ -37,8 +37,8 @@ int main(int argc, char **argv) {
             return 0;
         } else if (strcmp(argv[a], "--compile") == 0) {
             compile_only = 1;
-        } else if (strcmp(argv[a], "--remcpp") == 0) {
-            remove_cpp = 1;
+        } else if (strcmp(argv[a], "--keepcpp") == 0) {
+            keep_cpp = 1;
         } else if (strcmp(argv[a], "--stime") == 0) {
             show_stats = 1;
         } else {
@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
     }
 
     if (!input_file) {
-        fprintf(stderr, "Usage: %s [--version] [--compile] [--remcpp] [--stime] file.kn\n", argv[0]);
+        fprintf(stderr, "Usage: %s [--version] [--compile] [--keepcpp] [--stime] file.kn\n", argv[0]);
         return 1;
     }
 
@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
         system(run_cmd);
     }
 
-    if (remove_cpp) remove(output_path);
+    if (!keep_cpp) remove(output_path);
 
     free(source);
     return ret != 0 ? 1 : 0;

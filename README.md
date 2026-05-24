@@ -41,7 +41,7 @@ kinnie main.kn
 
 - `--version` — Display version information
 - `--compile` — Compile only, do not run the generated executable
-- `--remcpp` — Remove the generated C++ file after compilation
+- `--keepcpp` — Keep the generated C++ file after compilation
 - `--stime` — Show compilation time statistics for each stage (tokenization, includes, parsing, codegen, C++ compilation)
 
 ## Language Syntax
