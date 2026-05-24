@@ -60,8 +60,6 @@ fun main() {
     Color color
     color.setColor(20, 30, 40)
 
-    Vec2 v
-
     var i = 0
     rep 1 {
         clearScreen(color.r, color.g, color.b)
