@@ -1,4 +1,8 @@
 # Kinnie
+<div align="center">
+    <img width="300" height="300" alt="logo_kinnie" src="https://github.com/user-attachments/assets/9c421472-a058-42c5-8621-bdf183207f69" />
+</div>
+    
 ## Setup
 
 **Important! Remember, to use the built-in graphics library, you must have the SDL and SDL_ttf library installed. Also, make sure you have gcc and g++ compilers installed. Kinnie does not support the underscore character in variable, function and struct names.**
