@@ -21,7 +21,7 @@
 #  define HAVE_SDL_TTF 0
 #endif
 
-#define KINNIE_VERSION      "4.0.0"
+#define KINNIE_VERSION      "4.1.0"
 #define MAX_TOKENS          2048
 #define MAX_EXPANDED_TOKENS 8192
 #define MAX_FUNCTIONS       64
@@ -69,6 +69,8 @@ typedef struct {
     char field_defaults[MAX_STRUCT_FIELDS][MAX_STRING_LEN];
     int field_is_string[MAX_STRUCT_FIELDS];
     int field_is_array[MAX_STRUCT_FIELDS];
+    int field_is_struct[MAX_STRUCT_FIELDS];
+    char field_struct_types[MAX_STRUCT_FIELDS][MAX_NAME_LEN];
     size_t field_count;
     Function methods[MAX_STRUCT_METHODS];
     size_t method_count;

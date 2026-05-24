@@ -1,26 +1,10 @@
-str Player {
-    var position = [400, 300]
-    var color = [255, 120, 0]
-    var size = 60
-    var speed = 300
+str Vec2 {
+    var x = 0
+    var y = 0
 
-    fun draw() {
-        drawSquare(position[0], position[1], size, color[0], color[1], color[2])
-    }
-
-    fun move() {
-        if keyDown("right") {
-            position[0] = position[0] + speed * deltaTime
-        }
-        if keyDown("left") {
-            position[0] = position[0] - speed * deltaTime
-        }
-        if keyDown("up") {
-            position[1] = position[1] - speed * deltaTime
-        }
-        if keyDown("down") {
-            position[1] = position[1] + speed * deltaTime
-        }
+    fun setVec2(xv, yv) {
+        x = xv
+        y = yv
     }
 }
 
@@ -36,14 +20,47 @@ str Color {
     }
 }
 
+str Player {
+    Vec2 position
+    Color color
+    var size = 60
+    var speed = 300
+
+    fun draw() {
+        Vec2 v
+        v.x = position.x - size / 2
+        v.y = position.y - size / 2
+        drawSquare(v.x, v.y, size, color.r, color.g, color.b)
+    }
+
+    fun move() {
+        if keyDown("right") {
+            position.x = position.x + speed * deltaTime
+        }
+        if keyDown("left") {
+            position.x = position.x - speed * deltaTime
+        }
+        if keyDown("up") {
+            position.y = position.y - speed * deltaTime
+        }
+        if keyDown("down") {
+            position.y = position.y + speed * deltaTime
+        }
+    }
+}
+
 fun main() {
     createWindow(800, 600, "Movement")
     setFont("/usr/share/fonts/Adwaita/AdwaitaMono-Regular.ttf")
+
     Player player
-    player.color = [220, 160, 40]
+    player.color.setColor(220, 120, 20)
+    player.position.setVec2(500, 500)
 
     Color color
     color.setColor(20, 30, 40)
+
+    Vec2 v
 
     var i = 0
     rep 1 {
@@ -56,6 +73,6 @@ fun main() {
             stop
         }
 
-        drawText(20, 20, "Player position: {player.position[0]}, {player.position[1]}", 20, 255, 255, 255)
+        drawText(20, 20, "Player position: {player.position.x}, {player.position.y}", 20, 255, 255, 255)
     }
 }

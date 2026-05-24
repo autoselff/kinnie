@@ -582,6 +582,20 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             continue;
         }
 
+        if (is_builtin_call(tokens, i, "drawRectangle")) {
+            i += 2;
+            char b[7][ARG_BUF_LEN];
+            i = parse_call_args(tokens, i, b, 7);
+            write_indent(out, indent);
+            fprintf(out, "{ SDL_SetRenderDrawColor(_renderer, %s, %s, %s, 255);\n", b[4], b[5], b[6]);
+            write_indent(out, indent);
+            fprintf(out, "  SDL_Rect _rect = {(int)(%s),(int)(%s),(int)(%s),(int)(%s)};\n",
+                    b[0], b[1], b[2], b[3]);
+            write_indent(out, indent);
+            fputs("  SDL_RenderFillRect(_renderer, &_rect); }\n", out);
+            continue;
+        }
+
         if (is_builtin_call(tokens, i, "drawCircle")) {
             i += 2;
             char b[6][ARG_BUF_LEN];
@@ -868,6 +882,49 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             }
             fputs(");\n", out);
             continue;
+        }
+
+        if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_DOT) {
+            size_t lookahead = i;
+            char full_chain[MAX_STRING_LEN] = "";
+            int chain_count = 0;
+
+            while (lookahead < token_count && tokens[lookahead].type == TOK_IDENT) {
+                if (chain_count == 0) {
+                    snprintf(full_chain, MAX_STRING_LEN, "%s", tokens[lookahead].text);
+                } else {
+                    size_t cur_len = strlen(full_chain);
+                    snprintf(full_chain + cur_len, MAX_STRING_LEN - cur_len, ".%s", tokens[lookahead].text);
+                }
+                chain_count++;
+                lookahead++;
+
+                if (lookahead < token_count && tokens[lookahead].type == TOK_DOT) {
+                    lookahead++;
+                    if (lookahead >= token_count || tokens[lookahead].type != TOK_IDENT) {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            if (lookahead < token_count && tokens[lookahead].type == TOK_LBRACKET && chain_count > 1) {
+                write_indent(out, indent);
+                fprintf(out, "%s(", full_chain);
+                lookahead++;
+                int first_arg = 1;
+                while (lookahead < token_count && tokens[lookahead].type != TOK_RBRACKET && tokens[lookahead].type != TOK_EOF) {
+                    if (!first_arg) fputs(", ", out);
+                    first_arg = 0;
+                    lookahead = emit_expression(tokens, lookahead, out);
+                    if (lookahead < token_count && tokens[lookahead].type == TOK_COMMA) lookahead++;
+                }
+                if (lookahead < token_count && tokens[lookahead].type == TOK_RBRACKET) lookahead++;
+                fputs(");\n", out);
+                i = lookahead;
+                continue;
+            }
         }
 
         if (tokens[i].type == TOK_IDENT && tokens[i + 1].type == TOK_DOT
@@ -1387,7 +1444,9 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         Struct *c = &structs[ci];
         fprintf(out, "struct %s {\n", c->name);
         for (size_t fi2 = 0; fi2 < c->field_count; fi2++) {
-            if (c->field_is_array[fi2])
+            if (c->field_is_struct[fi2])
+                fprintf(out, "    %s %s;\n", c->field_struct_types[fi2], c->field_names[fi2]);
+            else if (c->field_is_array[fi2])
                 fprintf(out, "    _KnTable %s = %s;\n", c->field_names[fi2], c->field_defaults[fi2]);
             else if (c->field_is_string[fi2])
                 fprintf(out, "    std::string %s = %s;\n", c->field_names[fi2], c->field_defaults[fi2]);

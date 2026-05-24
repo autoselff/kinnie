@@ -608,6 +608,12 @@ Draws a filled square.
 drawSquare(100, 100, 50, 255, 0, 0)  // red square at (100,100), size 50
 ```
 
+#### `drawRectangle(x, y, sizeX, sizeY, r, g, b)`
+Draws a filled rectangle with specified width and height.
+```kinnie
+drawRectangle(100, 100, 100, 50, 255, 0, 0)  // red rectangle at (100,100), 100x50
+```
+
 #### `drawCircle(x, y, radius, r, g, b)`
 Draws a filled circle using the midpoint circle algorithm.
 ```kinnie

@@ -117,6 +117,26 @@ void parse_structs(Token tokens[], size_t token_count) {
         size_t end = find_block_end(tokens, token_count, i);
         size_t j = i;
         while (j < end) {
+            if (tokens[j].type == TOK_IDENT && j + 1 < end && tokens[j + 1].type == TOK_IDENT && tokens[j + 2].type != TOK_ASSIGN && tokens[j + 2].type != TOK_LSQUARE) {
+                int is_struct_type = 0;
+                for (size_t si = 0; si < struct_count; si++) {
+                    if (strcmp(tokens[j].text, structs[si].name) == 0) {
+                        is_struct_type = 1;
+                        break;
+                    }
+                }
+                if (is_struct_type && c->field_count < MAX_STRUCT_FIELDS) {
+                    snprintf(c->field_names[c->field_count], MAX_NAME_LEN, "%s", tokens[j + 1].text);
+                    snprintf(c->field_struct_types[c->field_count], MAX_NAME_LEN, "%s", tokens[j].text);
+                    c->field_is_struct[c->field_count] = 1;
+                    c->field_is_string[c->field_count] = 0;
+                    c->field_is_array[c->field_count] = 0;
+                    snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "");
+                    c->field_count++;
+                    j += 2;
+                    continue;
+                }
+            }
             if (tokens[j].type == TOK_VAR && j + 1 < end && tokens[j + 1].type == TOK_IDENT) {
                 j++;
                 if (c->field_count >= MAX_STRUCT_FIELDS) { j++; continue; }
@@ -126,6 +146,7 @@ void parse_structs(Token tokens[], size_t token_count) {
                 if (tokens[j].type == TOK_LSQUARE) {
                     c->field_is_array[c->field_count] = 1;
                     c->field_is_string[c->field_count] = 0;
+                    c->field_is_struct[c->field_count] = 0;
                     char arr_init[MAX_STRING_LEN] = "_KnTable{";
                     int arr_len = strlen(arr_init);
                     int first = 1;
@@ -146,21 +167,25 @@ void parse_structs(Token tokens[], size_t token_count) {
                 } else if (tokens[j].type == TOK_STRING) {
                     c->field_is_string[c->field_count] = 1;
                     c->field_is_array[c->field_count] = 0;
+                    c->field_is_struct[c->field_count] = 0;
                     snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "\"%s\"", tokens[j].text);
                     j++;
                 } else if (tokens[j].type == TOK_NUMBER) {
                     c->field_is_string[c->field_count] = 0;
                     c->field_is_array[c->field_count] = 0;
+                    c->field_is_struct[c->field_count] = 0;
                     snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "%s", tokens[j].text);
                     j++;
                 } else if (tokens[j].type == TOK_MINUS && tokens[j + 1].type == TOK_NUMBER) {
                     c->field_is_string[c->field_count] = 0;
                     c->field_is_array[c->field_count] = 0;
+                    c->field_is_struct[c->field_count] = 0;
                     snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "-%s", tokens[j + 1].text);
                     j += 2;
                 } else {
                     c->field_is_string[c->field_count] = 0;
                     c->field_is_array[c->field_count] = 0;
+                    c->field_is_struct[c->field_count] = 0;
                     snprintf(c->field_defaults[c->field_count], MAX_STRING_LEN, "0");
                 }
                 c->field_count++;
