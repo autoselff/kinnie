@@ -699,3 +699,6 @@ playerX = playerX + speed * deltaTime
 - Structs cannot be returned from functions or initialized with `= expr`
 - Arrays can be nested arbitrarily (unlimited dimensions)
 - Array methods: `.add(value)` appends, `.remove(index)` removes by index; both work on nested arrays
+
+## Contact
+- email: `kinnnie@autoselff.com`
