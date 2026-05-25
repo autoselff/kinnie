@@ -25,11 +25,18 @@ str Player {
     Color color
     var size = 60
     var speed = 300
+    var d = 0
 
-    fun draw() {
+    fun draw(t) {
         Vec2 v
         v.x = position.x - size / 2
         v.y = position.y - size / 2
+
+        d = distance(v.x, v.y, 400, 300)
+        color.r = lerp(255, 60, min(d, 260) / 260)
+        color.g = lerp(60, 220, (sin(t * 1.5) + 1) * 0.5)
+        color.b = lerp(120, 255, (cos(t) + 1) * 0.5)
+
         drawSquare(v.x, v.y, size, color.r, color.g, color.b)
     }
 
@@ -60,10 +67,12 @@ fun main() {
     Color color
     color.setColor(20, 30, 40)
 
+    var t = 0
+
     rep true {
         clearScreen(color.r, color.g, color.b)
 
-        player.draw()
+        player.draw(t)
         player.move()
 
         if keyPressed("escape") {
@@ -72,6 +81,8 @@ fun main() {
 
         var dist = distance(player.position.x, player.position.y, 0, 0)
         drawText(20, 20, "Player position: {player.position.x}, {player.position.y}", 20, 255, 255, 255)
-        drawText(20, 50, "Distance to ZERO: {dist}", 20, 255, 255, 255)
+        drawText(20, 50, "Distance to ZERO: {player.d}", 20, player.color.r, player.color.g, player.color.b)
+
+        t = t + deltaTime
     }
 }
