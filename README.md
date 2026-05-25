@@ -701,4 +701,4 @@ playerX = playerX + speed * deltaTime
 - Array methods: `.add(value)` appends, `.remove(index)` removes by index; both work on nested arrays
 
 ## Contact
-- email: `kinnnie@autoselff.com`
+- email: `kinnie@autoselff.com`
