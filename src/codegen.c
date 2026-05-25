@@ -913,7 +913,7 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
                 }
             }
 
-            if (lookahead < token_count && tokens[lookahead].type == TOK_LBRACKET && chain_count > 1) {
+            if (lookahead < token_count && tokens[lookahead].type == TOK_LBRACKET && chain_count > 2) {
                 write_indent(out, indent);
                 fprintf(out, "%s(", full_chain);
                 lookahead++;
