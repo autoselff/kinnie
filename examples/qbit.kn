@@ -1,0 +1,67 @@
+// Quantum bit programming example
+// Demonstrating superposition, quantum gates, and probabilistic measurement
+
+fun main {
+    out "=== Quantum Bit (QBit) Programming ==="
+    out "\n"
+
+    // Create a qubit in |0⟩ state
+    var q = qbit
+    out "Initial state: |0⟩\n"
+    out "Prob(0) = {q.prob0()}, Prob(1) = {q.prob1()}\n"
+
+    // Apply Hadamard gate - creates superposition
+    out "\n--- Hadamard Gate (Superposition) ---\n"
+    q.H()
+    out "After H(): (1/√2)|0⟩ + (1/√2)|1⟩\n"
+    out "Prob(0) = {q.prob0()}, Prob(1) = {q.prob1()}\n"
+
+    // Measurement collapses the state
+    out "\n--- Measurement (State Collapse) ---\n"
+    var result1 = q.get()
+    out "Measured: {result1}\n"
+
+    // Pauli X gate (bit flip)
+    out "\n--- Pauli X Gate (Bit Flip) ---\n"
+    var q2 = qbit
+    out "q2 initial: |0⟩\n"
+    q2.X()
+    out "After X(): |1⟩\n"
+    var result2 = q2.get()
+    out "Measured: {result2}\n"
+
+    // Pauli Z gate (phase flip)
+    out "\n--- Pauli Z Gate (Phase Flip) ---\n"
+    var q3 = qbit
+    q3.H()
+    out "Applied H()\n"
+    q3.Z()
+    out "Applied Z()\n"
+    out "Prob(0) = {q3.prob0()}, Prob(1) = {q3.prob1()}\n"
+    var result3 = q3.get()
+    out "Measured: {result3}\n"
+
+    // Statistical test: many measurements of superposition
+    out "\n--- Statistical Test (1000 measurements) ---\n"
+    var count0 = 0
+    var count1 = 0
+    var i = 0
+
+    rep 1000 {
+        var test = qbit
+        test.H()
+        var measurement = test.get()
+
+        if measurement == 0 {
+            count0 = count0 + 1
+        } else {
+            count1 = count1 + 1
+        }
+        i = i + 1
+    }
+
+    out "Results:\n"
+    out "Measured 0: {count0} times\n"
+    out "Measured 1: {count1} times\n"
+    out "Expected: ~500 each (both should be close to 50%)\n"
+}

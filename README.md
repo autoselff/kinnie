@@ -564,6 +564,87 @@ The compiler detects struct parameters automatically by looking for dot-notation
 
 Limits: maximum 32 structs, 32 fields per struct, 16 methods per struct.
 
+### Quantum Bits (QBit)
+
+Kinnie supports quantum bit programming with proper superposition, quantum gates, and probabilistic measurement.
+
+#### Creating a Quantum Bit
+
+```kinnie
+var q = qbit
+```
+
+A qbit starts in the |0⟩ state. Internally represented as two complex amplitudes: α (for |0⟩) and β (for |1⟩).
+
+#### Quantum Gates
+
+**Hadamard Gate (H)** — Creates equal superposition:
+```kinnie
+var q = qbit
+q.H()                    // q is now in (1/√2)|0⟩ + (1/√2)|1⟩ state
+out "Prob(0) = {q.prob0()}, Prob(1) = {q.prob1()}"
+```
+
+**Pauli X Gate** — Bit flip (NOT gate):
+```kinnie
+var q = qbit
+q.X()                    // q is now |1⟩
+var result = q.get()     // result = 1
+```
+
+**Pauli Z Gate** — Phase flip:
+```kinnie
+var q = qbit
+q.H()
+q.Z()                    // applies phase to |1⟩ component
+```
+
+#### Measurement
+
+Measurement collapses the quantum state to either 0 or 1 based on probabilities |α|² and |β|².
+
+```kinnie
+var q = qbit
+q.H()
+var result = q.get()     // returns 0 or 1 with ~50% probability each
+// After measurement, q is collapsed to the measured state
+```
+
+#### Checking Probabilities
+
+```kinnie
+var q = qbit
+q.H()
+var p0 = q.prob0()       // probability of measuring 0
+var p1 = q.prob1()       // probability of measuring 1
+// p0 + p1 = 1.0
+```
+
+#### Example: Statistical Verification
+
+```kinnie
+fun main {
+    var count0 = 0
+    var count1 = 0
+    
+    rep 1000 {
+        var q = qbit
+        q.H()
+        var result = q.get()
+        if result == 0 {
+            count0 = count0 + 1
+        } else {
+            count1 = count1 + 1
+        }
+    }
+    
+    out "Measured 0: {count0} times (~50%)\n"
+    out "Measured 1: {1000 - count0} times (~50%)\n"
+}
+```
+
+See `examples/qbit.kn` for a complete quantum programming example.
+
 ### Including Files
 
 ```kinnie

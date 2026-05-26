@@ -21,7 +21,7 @@
 #  define HAVE_SDL_TTF 0
 #endif
 
-#define KINNIE_VERSION      "4.1.1"
+#define KINNIE_VERSION      "4.1.1q"
 #define MAX_TOKENS          2048
 #define MAX_EXPANDED_TOKENS 8192
 #define MAX_FUNCTIONS       64
@@ -47,6 +47,7 @@ typedef enum {
     TOK_AND, TOK_OR, TOK_NOT,
     TOK_PLUS_ASSIGN, TOK_MINUS_ASSIGN, TOK_MUL_ASSIGN, TOK_DIV_ASSIGN,
     TOK_INCREMENT, TOK_DECREMENT,
+    TOK_QBIT,
     TOK_UNKNOWN
 } TokenType;
 

@@ -22,6 +22,7 @@ static const struct { const char *kw; TokenType type; } KEYWORDS[] = {
     {"and",        TOK_AND},
     {"or",         TOK_OR},
     {"not",        TOK_NOT},
+    {"qbit",       TOK_QBIT},
 };
 
 static TokenType lookup_keyword(const char *text) {

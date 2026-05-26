@@ -660,6 +660,12 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
             i += 3;
             write_indent(out, indent);
 
+            if (tokens[i].type == TOK_QBIT) {
+                fprintf(out, "QBit %s;\n", name);
+                i++;
+                continue;
+            }
+
             if (tokens[i].type == TOK_LSQUARE) {
                 i++;
                 if (tokens[i].type == TOK_LSQUARE) {
@@ -1270,6 +1276,7 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "#include <random>\n"
         "#include <iomanip>\n"
         "#include <cmath>\n"
+        "#include <complex>\n"
         "#include <variant>\n"
         "#include <thread>\n"
         "#include <chrono>\n",
@@ -1283,6 +1290,35 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
 
     fputs(
         "\n"
+        "class QBit {\n"
+        "    std::complex<double> alpha, beta;\n"
+        "public:\n"
+        "    QBit() : alpha(1.0, 0.0), beta(0.0, 0.0) {}\n"
+        "    void H() {\n"
+        "        double sqrt2_inv = 1.0 / std::sqrt(2.0);\n"
+        "        std::complex<double> a = sqrt2_inv * (alpha + beta);\n"
+        "        std::complex<double> b = sqrt2_inv * (alpha - beta);\n"
+        "        alpha = a; beta = b;\n"
+        "    }\n"
+        "    void X() { std::swap(alpha, beta); }\n"
+        "    void Z() { beta = -beta; }\n"
+        "    int measure() {\n"
+        "        double prob0 = std::norm(alpha);\n"
+        "        double rand_val = (double)rand() / RAND_MAX;\n"
+        "        if (rand_val < prob0) {\n"
+        "            alpha = std::complex<double>(1.0, 0.0);\n"
+        "            beta = std::complex<double>(0.0, 0.0);\n"
+        "            return 0;\n"
+        "        } else {\n"
+        "            alpha = std::complex<double>(0.0, 0.0);\n"
+        "            beta = std::complex<double>(1.0, 0.0);\n"
+        "            return 1;\n"
+        "        }\n"
+        "    }\n"
+        "    int get() { return measure(); }\n"
+        "    double prob0() const { return std::norm(alpha); }\n"
+        "    double prob1() const { return std::norm(beta); }\n"
+        "};\n"
         "class _KnVal {\n"
         "public:\n"
         "    enum Type { NUMBER, STRING, ARRAY };\n"
