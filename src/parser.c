@@ -66,8 +66,19 @@ void parse_functions(Token tokens[], size_t token_count) {
                     fprintf(stderr, "Expected parameter name\n");
                     exit(1);
                 }
-                snprintf(f->param_names[f->param_count++], MAX_NAME_LEN, "%s", tokens[i].text);
+                snprintf(f->param_names[f->param_count], MAX_NAME_LEN, "%s", tokens[i].text);
                 i++;
+                f->param_is_array[f->param_count] = 0;
+                if (tokens[i].type == TOK_LSQUARE) {
+                    f->param_is_array[f->param_count] = 1;
+                    i++;
+                    if (tokens[i].type != TOK_RSQUARE) {
+                        fprintf(stderr, "Expected ']' after array parameter\n");
+                        exit(1);
+                    }
+                    i++;
+                }
+                f->param_count++;
                 if (tokens[i].type == TOK_COMMA) i++;
             }
             if (tokens[i].type != TOK_RBRACKET) {
@@ -201,9 +212,19 @@ void parse_structs(Token tokens[], size_t token_count) {
                 if (tokens[j].type == TOK_LBRACKET) {
                     j++;
                     while (tokens[j].type != TOK_RBRACKET && tokens[j].type != TOK_EOF) {
-                        if (tokens[j].type == TOK_IDENT && f->param_count < MAX_FUNC_PARAMS)
-                            strncpy(f->param_names[f->param_count++], tokens[j].text, MAX_NAME_LEN - 1);
+                        if (tokens[j].type == TOK_IDENT && f->param_count < MAX_FUNC_PARAMS) {
+                            strncpy(f->param_names[f->param_count], tokens[j].text, MAX_NAME_LEN - 1);
+                            f->param_is_array[f->param_count] = 0;
+                            f->param_count++;
+                        }
                         j++;
+                        if (tokens[j].type == TOK_LSQUARE) {
+                            if (f->param_count > 0) {
+                                f->param_is_array[f->param_count - 1] = 1;
+                                j++;
+                                if (tokens[j].type == TOK_RSQUARE) j++;
+                            }
+                        }
                         if (tokens[j].type == TOK_COMMA) j++;
                     }
                     if (tokens[j].type == TOK_RBRACKET) j++;

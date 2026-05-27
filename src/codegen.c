@@ -139,6 +139,15 @@ static size_t emit_value(Token tokens[], size_t i, FILE *out) {
                     fputs(")]", out);
                 }
                 fputs(".size()", out);
+            } else if (tokens[i + 1].type == TOK_DOT) {
+                fputs("(", out);
+                fprintf(out, "%s", tokens[i].text);
+                i++;
+                while (tokens[i].type == TOK_DOT && tokens[i + 1].type == TOK_IDENT) {
+                    fprintf(out, ".%s", tokens[i + 1].text);
+                    i += 2;
+                }
+                fputs(").size()", out);
             } else {
                 fprintf(out, "%s.size()", tokens[i].text);
                 i++;
@@ -389,28 +398,6 @@ static RetType detect_return_type(Token tokens[], size_t token_count) {
     return RT_VOID;
 }
 
-static int param_is_array(const char *param_name, Token tokens[], size_t token_count) {
-    for (size_t i = 0; i < token_count; i++) {
-        if (tokens[i].type == TOK_IDENT
-            && strcmp(tokens[i].text, param_name) == 0
-            && i + 1 < token_count
-            && tokens[i + 1].type == TOK_LSQUARE)
-            return 1;
-        if (tokens[i].type == TOK_STRING) {
-            char search[MAX_STRING_LEN + 4];
-            snprintf(search, sizeof(search), "%s[", param_name);
-            if (strstr(tokens[i].text, search)) return 1;
-        }
-    }
-    return 0;
-}
-
-static int param_is_2d_array(const char *param_name, Token tokens[], size_t token_count) {
-    (void)param_name;
-    (void)tokens;
-    (void)token_count;
-    return 0;
-}
 
 static const char *param_struct_type(const char *param_name, Token tokens[], size_t token_count) {
     for (size_t i = 0; i + 2 < token_count; i++) {
@@ -438,9 +425,7 @@ static void emit_func_signature(FILE *out, Function *f) {
     fprintf(out, "%s %s(", ret, f->name);
     for (size_t pi = 0; pi < f->param_count; pi++) {
         if (pi > 0) fputs(", ", out);
-        if (param_is_2d_array(f->param_names[pi], f->tokens, f->token_count)) {
-            fprintf(out, "_KnTable2D& %s", f->param_names[pi]);
-        } else if (param_is_array(f->param_names[pi], f->tokens, f->token_count)) {
+        if (f->param_is_array[pi]) {
             fprintf(out, "_KnTable& %s", f->param_names[pi]);
         } else {
             const char *ct = param_struct_type(f->param_names[pi], f->tokens, f->token_count);
@@ -818,7 +803,8 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
                 && (tokens[_scan+2].type == TOK_IDENT || tokens[_scan+2].type == TOK_ADD)
                 && tokens[_scan+3].type == TOK_LBRACKET
                 && (strcmp(tokens[_scan+2].text, "remove") == 0
-                    || strcmp(tokens[_scan+2].text, "add") == 0)) {
+                    || strcmp(tokens[_scan+2].text, "add") == 0
+                    || strcmp(tokens[_scan+2].text, "clear") == 0)) {
                 const char *_arrname = tokens[i].text;
                 const char *_method  = tokens[_scan+2].text;
                 i += 2;
@@ -835,6 +821,8 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
                     fputs("_kn_ref.erase(_kn_ref.begin() + (int)(", out);
                     i = emit_expression(tokens, i, out);
                     fputs("));\n", out);
+                } else if (strcmp(_method, "clear") == 0) {
+                    fputs("_kn_ref.clear();\n", out);
                 } else {
                     if (tokens[i].type == TOK_LSQUARE) {
                         fputs("{ _KnTable _tmp_add;\n", out);
@@ -969,6 +957,13 @@ void convert_tokens_to_cpp(Token tokens[], size_t token_count, FILE *out, int in
                     fprintf(out, "%s.erase(%s.begin() + (int)(", _obj, _obj);
                     i = emit_expression(tokens, i, out);
                     fputs("));\n", out);
+                    if (tokens[i].type == TOK_RBRACKET) i++;
+                    continue;
+                }
+
+                if (strcmp(_method, "clear") == 0) {
+                    write_indent(out, indent);
+                    fprintf(out, "%s.clear();\n", _obj);
                     if (tokens[i].type == TOK_RBRACKET) i++;
                     continue;
                 }
@@ -1332,6 +1327,10 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "    friend bool operator<=(double a, const _KnVal& b) { return a <= b._n; }\n"
         "    friend bool operator==(double a, const _KnVal& b) { return a == b._n; }\n"
         "    friend bool operator!=(double a, const _KnVal& b) { return a != b._n; }\n"
+        "    friend bool operator==(const _KnVal& a, const char* b) { return a._type == STRING && a._t == b; }\n"
+        "    friend bool operator!=(const _KnVal& a, const char* b) { return !(a == b); }\n"
+        "    friend bool operator==(const char* a, const _KnVal& b) { return b == a; }\n"
+        "    friend bool operator!=(const char* a, const _KnVal& b) { return !(b == a); }\n"
         "    \n"
         "    friend std::ostream& operator<<(std::ostream& os, const _KnVal& v) {\n"
         "        if (v._type == STRING) return os << v._t;\n"
@@ -1392,12 +1391,26 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
         "Uint32 _last_frame_time = 0;\n"
         "std::string _font_path = \"\";\n\n"
         "bool _key_pressed(const char *key_name) {\n"
+        "    if (strcmp(key_name, \"any\") == 0) {\n"
+        "        // Check a-z only (ASCII 97-122)\n"
+        "        for (int i = 97; i <= 122; i++) {\n"
+        "            if (_key_state[i % 512] && !_prev_key_state[i % 512]) return true;\n"
+        "        }\n"
+        "        return false;\n"
+        "    }\n"
         "    SDL_Keycode kc = SDL_GetKeyFromName(key_name);\n"
         "    if (kc == SDLK_UNKNOWN) return false;\n"
         "    int idx = kc % 512;\n"
         "    return _key_state[idx] && !_prev_key_state[idx];\n"
         "}\n\n"
         "bool _key_down(const char *key_name) {\n"
+        "    if (strcmp(key_name, \"any\") == 0) {\n"
+        "        // Check a-z only (ASCII 97-122)\n"
+        "        for (int i = 97; i <= 122; i++) {\n"
+        "            if (_key_state[i % 512]) return true;\n"
+        "        }\n"
+        "        return false;\n"
+        "    }\n"
         "    SDL_Keycode kc = SDL_GetKeyFromName(key_name);\n"
         "    if (kc == SDLK_UNKNOWN) return false;\n"
         "    int idx = kc % 512;\n"
@@ -1464,9 +1477,7 @@ void convert_to_cpp(Token tokens[], size_t token_count, const char *output_path,
             fprintf(out, "    %s %s(", ret_str, m->name);
             for (size_t pi = 0; pi < m->param_count; pi++) {
                 if (pi > 0) fputs(", ", out);
-                if (param_is_2d_array(m->param_names[pi], m->tokens, m->token_count))
-                    fprintf(out, "_KnTable2D& %s", m->param_names[pi]);
-                else if (param_is_array(m->param_names[pi], m->tokens, m->token_count))
+                if (m->param_is_array[pi])
                     fprintf(out, "_KnTable& %s", m->param_names[pi]);
                 else {
                     const char *ct = param_struct_type(m->param_names[pi], m->tokens, m->token_count);

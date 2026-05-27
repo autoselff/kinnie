@@ -21,7 +21,7 @@
 #  define HAVE_SDL_TTF 0
 #endif
 
-#define KINNIE_VERSION      "4.1.1"
+#define KINNIE_VERSION      "4.1.2"
 #define MAX_TOKENS          2048
 #define MAX_EXPANDED_TOKENS 8192
 #define MAX_FUNCTIONS       64
@@ -60,6 +60,7 @@ typedef struct {
     Token tokens[MAX_TOKENS];
     size_t token_count;
     char param_names[MAX_FUNC_PARAMS][MAX_NAME_LEN];
+    int param_is_array[MAX_FUNC_PARAMS];
     size_t param_count;
 } Function;
 

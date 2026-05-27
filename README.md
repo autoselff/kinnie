@@ -109,11 +109,19 @@ tab.remove(0)              // [2, 3, 4]
 tab.remove(len(tab) - 1)  // removes last element
 ```
 
-Both methods work on nested arrays too:
+##### `.clear()`
+Removes all elements from the array, making it empty.
+```kinnie
+var tab = [1, 2, 3, 4]
+tab.clear()   // tab is now []
+```
+
+All methods work on nested arrays too:
 ```kinnie
 var tab = [1, 2, [3, 4]]
 tab[2].remove(0)   // tab is now [1, 2, [4]]
 tab[2].add(99)     // tab is now [1, 2, [4, 99]]
+tab[2].clear()     // tab is now [1, 2, []]
 ```
 
 Array in loops:
@@ -430,9 +438,11 @@ fun main() {
 }
 ```
 
-Arrays passed to functions are always passed as originals (by reference). Modifications inside the function affect the original array:
+Arrays passed to functions are always passed as originals (by reference). Modifications inside the function affect the original array.
+
+**Array parameters must be declared with `[]` syntax:**
 ```kinnie
-fun foo(t) {
+fun foo(t[]) {
     var l = len(t) - 1
     rep l {
         var temp = l + 1
@@ -440,7 +450,7 @@ fun foo(t) {
     }
 }
 
-fun sho(t) {
+fun display(t[]) {
     var l = len(t)
     rep l {
         out "{t[l]}\n"
@@ -450,12 +460,22 @@ fun sho(t) {
 fun main() {
     var tab = [100, 200, 300, 400, 500]
     foo(tab)
-    sho(tab)
+    display(tab)
 }
-
 ```
 
-The compiler detects array parameters automatically — no special syntax needed.
+When declaring a function parameter as an array, use `paramName[]` syntax. This tells the compiler that the parameter should receive an array reference:
+```kinnie
+fun clearAndDisplay(arr[]) {
+    arr.clear()
+    out "Array cleared\n"
+}
+
+fun addElements(nums[], value) {
+    nums.add(value)
+    nums.add(value * 2)
+}
+```
 
 ### Structs
 
@@ -698,7 +718,8 @@ playerX = playerX + speed * deltaTime
 - Maximum 32 structs, 32 fields per struct, 16 methods per struct
 - Structs cannot be returned from functions or initialized with `= expr`
 - Arrays can be nested arbitrarily (unlimited dimensions)
-- Array methods: `.add(value)` appends, `.remove(index)` removes by index; both work on nested arrays
+- Array methods: `.add(value)` appends, `.remove(index)` removes by index, `.clear()` empties the array; all work on nested arrays
+- Array parameters must be declared with `[]` syntax: `fun foo(arr[]) { ... }`
 
 ## Contact
 - email: `kinnie@autoselff.com`
