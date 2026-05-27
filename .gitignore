@@ -62,3 +62,6 @@ main
 
 # debug information files
 *.dwo
+
+html
+latex
