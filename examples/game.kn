@@ -147,23 +147,20 @@ str Player {
                 poss.remove(l)
             }
         }
-        else {
-            if dir == 0 and keyPressed("any") {
+        else if len(s) > len(poss) {
+            if dir == 0 {
                 poss.add([position.x, position.y])
                 position.y = position.y - size
             }
-
-            if dir == 1 and keyPressed("any") {
+            else if dir == 1 {
                 poss.add([position.x, position.y])
                 position.y = position.y + size
             }
-
-            if dir == 2 and keyPressed("any") {
+            else if dir == 2 {
                 poss.add([position.x, position.y])
                 position.x = position.x + size
             }
-
-            if dir == 3 and keyPressed("any") {
+            else if dir == 3 {
                 poss.add([position.x, position.y])
                 position.x = position.x - size
             }
@@ -185,9 +182,9 @@ fun main() {
 
     rep true {
         clearScreen(color.r, color.g, color.b)
-        player.draw(segments)
-        player.move(segments)
         handleInput(segments)
+        player.move(segments)
+        player.draw(segments)
 
         var i = 0
         rep len(segments) {
