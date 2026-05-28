@@ -107,29 +107,80 @@ str Player {
     var size = 50
     var dir = 0
     var poss = []
+    var flashtime = 0
 
-    fun draw(s[]) {
+    fun draw(s[], time) {
         var l = len(s)
+        var kwstart = l
+
+        if l >= 2 {
+            if s[l - 1] == "p" and s[l - 2] == "u" {
+                kwstart = l - 2
+            }
+        }
+        if l >= 4 {
+            if s[l - 1] == "n" and s[l - 2] == "w" and s[l - 3] == "o" and s[l - 4] == "d" {
+                kwstart = l - 4
+            }
+            if s[l - 1] == "t" and s[l - 2] == "f" and s[l - 3] == "e" and s[l - 4] == "l" {
+                kwstart = l - 4
+            }
+        }
+        if l >= 5 {
+            if s[l - 1] == "t" and s[l - 2] == "h" and s[l - 3] == "g" and s[l - 4] == "i" and s[l - 5] == "r" {
+                kwstart = l - 5
+            }
+        }
+
         if l > 0 {
             var i = 0
             rep l {
                 if i < len(poss) {
-                    drawText(poss[i][0], poss[i][1], "{s[i]}", 50, 255, 255, 255)
+                    var phase = time * 1.5 + i * 0.6
+                    var lr = 160 + 80 * sin(phase)
+                    var lg = 160 + 80 * sin(phase + 2.1)
+                    var lb = 160 + 80 * sin(phase + 4.2)
+
+                    if i >= kwstart {
+                        lr = 255
+                        lg = 210
+                        lb = 40
+                    }
+
+                    var wobble = sin(time * 4 + i * 1.2) * 3
+                    drawText(poss[i][0], poss[i][1] + wobble, "{s[i]}", 50, lr, lg, lb)
                 }
                 i = i + 1
             }
         }
+
+        var wobX = sin(time * 5) * 5
+        var wobY = cos(time * 4) * 4
+        var sz = 56 + sin(time * 2.5) * 5
+
+        var ar = 255
+        var ag = 255
+        var ab = 255
+        if flashtime > 0 {
+            ag = 210
+            ab = 40
+            flashtime = flashtime - deltaTime
+            if flashtime < 0 {
+                flashtime = 0
+            }
+        }
+
         if dir == 0 {
-            drawText(position.x, position.y, "^", 56, 255, 255, 255)
+            drawText(position.x + wobX, position.y + wobY, "^", sz, ar, ag, ab)
         }
         else if dir == 1 {
-            drawText(position.x, position.y, "v", 56, 255, 255, 255)
+            drawText(position.x + wobX, position.y + wobY, "v", sz, ar, ag, ab)
         }
         else if dir == 2 {
-            drawText(position.x, position.y, ">", 56, 255, 255, 255)
+            drawText(position.x + wobX, position.y + wobY, ">", sz, ar, ag, ab)
         }
         else if dir == 3 {
-            drawText(position.x, position.y, "<", 56, 255, 255, 255)
+            drawText(position.x + wobX, position.y + wobY, "<", sz, ar, ag, ab)
         }
     }
 
@@ -177,14 +228,19 @@ fun main() {
     player.position.setVec2(500, 500)
     var segments = []
 
-    Color color
-    color.setColor(20, 20, 20)
+    var time = 0
 
     rep true {
-        clearScreen(color.r, color.g, color.b)
+        time = time + deltaTime
+
+        var bgr = 15 + 5 * sin(time * 0.4)
+        var bgg = 18 + 4 * sin(time * 0.6 + 1.0)
+        var bgb = 22 + 7 * sin(time * 0.3 + 2.0)
+        clearScreen(bgr, bgg, bgb)
+
         handleInput(segments)
         player.move(segments)
-        player.draw(segments)
+        player.draw(segments, time)
 
         var i = 0
         rep len(segments) {
@@ -192,21 +248,25 @@ fun main() {
                 segments.clear()
                 player.poss.clear()
                 player.dir = 0
+                player.flashtime = 0.3
             }
             else if segments[i] == "n" and i >= 3 and segments[i - 1] == "w" and segments[i - 2] == "o" and segments[i - 3] == "d" and player.dir != 1 {
                 segments.clear()
                 player.poss.clear()
                 player.dir = 1
+                player.flashtime = 0.3
             }
             else if segments[i] == "t" and i >= 4 and segments[i - 1] == "h" and segments[i - 2] == "g" and segments[i - 3] == "i" and segments[i - 4] == "r" and player.dir != 2 {
                 segments.clear()
                 player.poss.clear()
                 player.dir = 2
+                player.flashtime = 0.3
             }
             else if segments[i] == "t" and i >= 3 and segments[i - 1] == "f" and segments[i - 2] == "e" and segments[i - 3] == "l" and player.dir != 3 {
                 segments.clear()
                 player.poss.clear()
                 player.dir = 3
+                player.flashtime = 0.3
             }
             i++
         }
