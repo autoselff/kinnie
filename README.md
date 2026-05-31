@@ -721,5 +721,5 @@ playerX = playerX + speed * deltaTime
 - Array methods: `.add(value)` appends, `.remove(index)` removes by index, `.clear()` empties the array; all work on nested arrays
 - Array parameters must be declared with `[]` syntax: `fun foo(arr[]) { ... }`
 
-## Contact
-- email: `kinnie@autoselff.com`
+## NOTE
+**AI was used to create this project.** To learn and test Claude Code, the Haiku 4.5 model was responsible for creating documentation, comments, splitting the code into files, and implementing functionalities such as arrays and data structures. I always include a note in projects where AI was used.
