@@ -722,4 +722,4 @@ playerX = playerX + speed * deltaTime
 - Array parameters must be declared with `[]` syntax: `fun foo(arr[]) { ... }`
 
 ## NOTE
-**AI was used to create this project.** To learn and test Claude Code, the Haiku 4.5 model was responsible for creating documentation, comments, splitting the code into files, and implementing functionalities such as arrays and data structures. I always include a note in projects where AI was used.
+**AI was used to create this project.** To learn and test Claude Code, the Haiku 4.5 model was responsible for creating documentation, comments, splitting the code into files, and implementing functionalities such as arrays and structures. I always include a note in projects where AI was used.
